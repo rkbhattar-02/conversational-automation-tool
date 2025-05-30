@@ -1,7 +1,6 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import * as monaco from 'monaco-editor';
 
 interface MonacoEditorProps {
   value: string;
@@ -16,7 +15,11 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   onChange, 
   height = '100%' 
 }) => {
-  useEffect(() => {
+  const monacoRef = useRef<any>(null);
+
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    monacoRef.current = monaco;
+    
     // Register custom language for test automation syntax
     monaco.languages.register({ id: 'custom' });
     
@@ -72,9 +75,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     
     // Set custom theme
     monaco.editor.setTheme('testAutomationTheme');
-  }, []);
 
-  const handleEditorDidMount = (editor: any) => {
     // Configure editor options
     editor.updateOptions({
       minimap: { enabled: true },

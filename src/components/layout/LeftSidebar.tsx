@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -21,7 +21,8 @@ import {
   Play,
   Edit,
   Copy,
-  Trash2
+  Trash2,
+  FileEdit
 } from 'lucide-react';
 
 interface LeftSidebarProps {
@@ -35,9 +36,12 @@ interface TreeNode {
   children?: TreeNode[];
   isExpanded?: boolean;
   status?: 'passed' | 'failed' | 'running' | 'pending';
+  route?: string;
 }
 
 const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   
@@ -54,9 +58,9 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
           type: 'folder',
           isExpanded: true,
           children: [
-            { id: '3', name: 'Login Flow', type: 'test', status: 'passed' },
-            { id: '4', name: 'Registration Flow', type: 'test', status: 'failed' },
-            { id: '5', name: 'Password Reset', type: 'test', status: 'pending' }
+            { id: '3', name: 'Login Flow', type: 'test', status: 'passed', route: '/test-editor' },
+            { id: '4', name: 'Registration Flow', type: 'test', status: 'failed', route: '/test-editor' },
+            { id: '5', name: 'Password Reset', type: 'test', status: 'pending', route: '/test-editor' }
           ]
         },
         {
@@ -65,9 +69,9 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
           type: 'folder',
           isExpanded: false,
           children: [
-            { id: '7', name: 'Add to Cart', type: 'test', status: 'passed' },
-            { id: '8', name: 'Remove from Cart', type: 'test', status: 'running' },
-            { id: '9', name: 'Checkout Process', type: 'test', status: 'pending' }
+            { id: '7', name: 'Add to Cart', type: 'test', status: 'passed', route: '/test-editor' },
+            { id: '8', name: 'Remove from Cart', type: 'test', status: 'running', route: '/test-editor' },
+            { id: '9', name: 'Checkout Process', type: 'test', status: 'pending', route: '/test-editor' }
           ]
         }
       ]
@@ -87,6 +91,17 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
       });
     };
     setTreeData(updateNode(treeData));
+  };
+
+  const handleNodeClick = (node: TreeNode) => {
+    setSelectedNode(node.id);
+    if (node.route) {
+      navigate(node.route);
+    }
+  };
+
+  const handleEditTest = (node: TreeNode) => {
+    navigate('/test-editor');
   };
 
   const getStatusColor = (status?: string) => {
@@ -122,7 +137,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
                 isSelected ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100'
               }`}
               style={{ paddingLeft: `${level * 16 + 8}px` }}
-              onClick={() => setSelectedNode(node.id)}
+              onClick={() => handleNodeClick(node)}
             >
               {hasChildren && (
                 <Button
@@ -167,7 +182,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
               <Play className="mr-2 h-4 w-4" />
               Run Test
             </ContextMenuItem>
-            <ContextMenuItem>
+            <ContextMenuItem onClick={() => handleEditTest(node)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit
             </ContextMenuItem>
@@ -210,6 +225,15 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
           <div className="flex space-x-1">
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <Plus className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={() => navigate('/test-editor')}
+              title="Open Test Editor"
+            >
+              <FileEdit className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <MoreHorizontal className="h-4 w-4" />

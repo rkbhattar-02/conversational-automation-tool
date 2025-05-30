@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Table, 
   TableBody, 
@@ -42,12 +43,51 @@ interface TestStep {
   object: string;
   parameters: string;
   status?: 'passed' | 'failed' | 'running' | 'pending';
+  selected?: boolean;
+}
+
+interface TestCase {
+  id: string;
+  name: string;
+  selected?: boolean;
+}
+
+interface TestSet {
+  id: string;
+  name: string;
+  selected?: boolean;
+  testCases: TestCase[];
 }
 
 const TestCaseEditor = () => {
   const [testCaseName, setTestCaseName] = useState('Login Flow Test');
   const [description, setDescription] = useState('Verify user can login with valid credentials');
   const [viewMode, setViewMode] = useState<'table' | 'code'>('table');
+  const [selectedSteps, setSelectedSteps] = useState<string[]>([]);
+  
+  const [testSets, setTestSets] = useState<TestSet[]>([
+    {
+      id: 'set1',
+      name: 'Authentication Tests',
+      selected: false,
+      testCases: [
+        { id: 'tc1', name: 'Login Flow Test', selected: false },
+        { id: 'tc2', name: 'Registration Flow', selected: false },
+        { id: 'tc3', name: 'Password Reset', selected: false }
+      ]
+    },
+    {
+      id: 'set2',
+      name: 'Shopping Cart Tests',
+      selected: false,
+      testCases: [
+        { id: 'tc4', name: 'Add to Cart', selected: false },
+        { id: 'tc5', name: 'Remove from Cart', selected: false },
+        { id: 'tc6', name: 'Checkout Process', selected: false }
+      ]
+    }
+  ]);
+
   const [steps, setSteps] = useState<TestStep[]>([
     {
       id: '1',
@@ -90,6 +130,46 @@ const TestCaseEditor = () => {
       status: 'pending'
     }
   ]);
+
+  const handleTestSetSelection = (setId: string, checked: boolean) => {
+    setTestSets(prev => prev.map(set => {
+      if (set.id === setId) {
+        return {
+          ...set,
+          selected: checked,
+          testCases: set.testCases.map(tc => ({ ...tc, selected: checked }))
+        };
+      }
+      return set;
+    }));
+  };
+
+  const handleTestCaseSelection = (setId: string, caseId: string, checked: boolean) => {
+    setTestSets(prev => prev.map(set => {
+      if (set.id === setId) {
+        const updatedTestCases = set.testCases.map(tc => 
+          tc.id === caseId ? { ...tc, selected: checked } : tc
+        );
+        const allSelected = updatedTestCases.every(tc => tc.selected);
+        const noneSelected = updatedTestCases.every(tc => !tc.selected);
+        
+        return {
+          ...set,
+          selected: allSelected,
+          testCases: updatedTestCases
+        };
+      }
+      return set;
+    }));
+  };
+
+  const handleStepSelection = (stepId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSteps(prev => [...prev, stepId]);
+    } else {
+      setSelectedSteps(prev => prev.filter(id => id !== stepId));
+    }
+  };
 
   const addStep = () => {
     const newStep: TestStep = {
@@ -203,6 +283,35 @@ const TestCaseEditor = () => {
             placeholder="Enter test case description..."
           />
         </div>
+
+        {/* Test Sets and Cases Selection */}
+        <div className="mt-4">
+          <Label className="text-sm font-medium mb-2 block">Test Selection</Label>
+          <div className="space-y-3 max-h-32 overflow-y-auto border rounded-md p-3 bg-gray-50">
+            {testSets.map(testSet => (
+              <div key={testSet.id} className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={testSet.selected}
+                    onCheckedChange={(checked) => handleTestSetSelection(testSet.id, checked as boolean)}
+                  />
+                  <span className="font-medium text-sm">{testSet.name}</span>
+                </div>
+                <div className="ml-6 space-y-1">
+                  {testSet.testCases.map(testCase => (
+                    <div key={testCase.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={testCase.selected}
+                        onCheckedChange={(checked) => handleTestCaseSelection(testSet.id, testCase.id, checked as boolean)}
+                      />
+                      <span className="text-sm text-gray-600">{testCase.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -225,6 +334,7 @@ const TestCaseEditor = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-12">Select</TableHead>
                           <TableHead className="w-16">#</TableHead>
                           <TableHead className="w-32">Status</TableHead>
                           <TableHead className="w-40">Action</TableHead>
@@ -239,6 +349,12 @@ const TestCaseEditor = () => {
                             key={step.id} 
                             className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition-colors`}
                           >
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedSteps.includes(step.id)}
+                                onCheckedChange={(checked) => handleStepSelection(step.id, checked as boolean)}
+                              />
+                            </TableCell>
                             <TableCell className="font-mono text-center">
                               {step.stepNumber}
                             </TableCell>
@@ -248,30 +364,18 @@ const TestCaseEditor = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="w-full justify-between text-blue-600 font-medium">
-                                    {step.action}
-                                    <ChevronDown className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  {commonActions.map(action => (
-                                    <DropdownMenuItem 
-                                      key={action}
-                                      onClick={() => updateStep(step.id, 'action', action)}
-                                    >
-                                      {action}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <Input
+                                value={step.action}
+                                onChange={(e) => updateStep(step.id, 'action', e.target.value)}
+                                className="text-blue-600 font-medium"
+                                placeholder="Action..."
+                              />
                             </TableCell>
                             <TableCell>
                               <Input
                                 value={step.object}
                                 onChange={(e) => updateStep(step.id, 'object', e.target.value)}
-                                className="text-purple-600 font-medium border-none bg-transparent focus:bg-white focus:border-gray-300"
+                                className="text-purple-600 font-medium"
                                 placeholder="Object name..."
                               />
                             </TableCell>
@@ -279,7 +383,7 @@ const TestCaseEditor = () => {
                               <Input
                                 value={step.parameters}
                                 onChange={(e) => updateStep(step.id, 'parameters', e.target.value)}
-                                className="text-green-600 font-mono border-none bg-transparent focus:bg-white focus:border-gray-300"
+                                className="text-green-600 font-mono"
                                 placeholder="Parameters..."
                               />
                             </TableCell>

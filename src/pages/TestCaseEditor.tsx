@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +34,11 @@ import {
   Code
 } from 'lucide-react';
 import MonacoEditor from './components/MonacoEditor';
+import { type Workspace } from '@/services/api/workspace-service';
+
+interface TestCaseEditorProps {
+  currentWorkspace?: Workspace | null;
+}
 
 interface TestStep {
   id: string;
@@ -59,7 +63,7 @@ interface TestSet {
   testCases: TestCase[];
 }
 
-const TestCaseEditor = () => {
+const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => {
   const [testCaseName, setTestCaseName] = useState('Login Flow Test');
   const [description, setDescription] = useState('Verify user can login with valid credentials');
   const [viewMode, setViewMode] = useState<'table' | 'code'>('table');

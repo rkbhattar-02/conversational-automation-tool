@@ -1,4 +1,30 @@
 
+/**
+ * Top Navigation Component
+ * 
+ * Purpose: Application header with workspace info, search, execution controls, and user menu
+ * 
+ * Dependencies:
+ * - React Router for navigation context
+ * - shadcn/ui components for consistent UI
+ * - Lucide React icons for visual elements
+ * 
+ * Connected Components:
+ * - AppLayout (parent container)
+ * - All page components (context provider)
+ * - User authentication system
+ * - Test execution controls
+ * 
+ * Features:
+ * - Global search functionality
+ * - Browser selection for test execution
+ * - Real-time execution controls (play/pause/stop)
+ * - AI agent status toggle
+ * - Notifications center
+ * - User profile and settings menu
+ * - Workspace breadcrumb navigation
+ */
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +50,16 @@ import {
   Square,
   Monitor
 } from 'lucide-react';
+import { type Workspace } from '@/services/api/workspace-service';
 
 interface TopNavigationProps {
+  currentWorkspace?: Workspace | null;
   onToggleLeftSidebar: () => void;
   onToggleRightSidebar: () => void;
 }
 
 const TopNavigation: React.FC<TopNavigationProps> = ({
+  currentWorkspace,
   onToggleLeftSidebar,
   onToggleRightSidebar,
 }) => {
@@ -56,17 +85,19 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
             <div className="w-4 h-4 bg-white rounded-sm"></div>
           </div>
           <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Test Automation IDE
+            TestCraft IDE
           </h1>
         </div>
         
         {/* Breadcrumb */}
         <div className="hidden md:flex items-center space-x-2 text-sm text-gray-600">
-          <span>Projects</span>
-          <span>/</span>
-          <span>E-commerce Tests</span>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">Login Flow</span>
+          <span>Workspaces</span>
+          {currentWorkspace && (
+            <>
+              <span>/</span>
+              <span className="text-gray-900 font-medium">{currentWorkspace.name}</span>
+            </>
+          )}
         </div>
       </div>
       
@@ -90,7 +121,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="flex items-center space-x-2">
               <Monitor className="h-4 w-4" />
-              <span>Chrome</span>
+              <span>{currentWorkspace?.settings.defaultBrowser || 'Chrome'}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

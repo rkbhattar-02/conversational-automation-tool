@@ -215,7 +215,7 @@ export const testExecutionService = {
     const totalTests = executions.length;
     const passedTests = executions.filter(exec => exec.status === 'passed').length;
     const failedTests = executions.filter(exec => exec.status === 'failed').length;
-    const skippedTests = executions.filter(exec => exec.status === 'skipped').length;
+    const stoppedTests = executions.filter(exec => exec.status === 'stopped').length;
     const totalDuration = executions.reduce((sum, exec) => sum + (exec.duration || 0), 0);
     const successRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
     
@@ -223,7 +223,7 @@ export const testExecutionService = {
       totalTests,
       passedTests,
       failedTests,
-      skippedTests,
+      skippedTests: stoppedTests, // Map stopped to skipped for UI compatibility
       totalDuration,
       successRate,
     };

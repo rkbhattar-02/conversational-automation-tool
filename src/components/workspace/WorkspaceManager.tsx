@@ -40,7 +40,7 @@ import {
   Users, 
   FileText,
   Chrome,
-  Firefox,
+  Globe,
   Monitor,
   Smartphone
 } from 'lucide-react';
@@ -52,6 +52,8 @@ interface WorkspaceManagerProps {
   currentWorkspaceId?: string;
 }
 
+type BrowserType = 'chrome' | 'firefox' | 'edge' | 'safari';
+
 const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
   onWorkspaceSelect,
   currentWorkspaceId
@@ -60,7 +62,7 @@ const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
   const [newWorkspace, setNewWorkspace] = useState({
     name: '',
     description: '',
-    defaultBrowser: 'chrome' as const,
+    defaultBrowser: 'chrome' as BrowserType,
     executionTimeout: 30000,
   });
   const [creationStep, setCreationStep] = useState(1);
@@ -127,7 +129,9 @@ const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
   const getBrowserIcon = (browser: string) => {
     switch (browser) {
       case 'chrome': return <Chrome className="h-4 w-4" />;
-      case 'firefox': return <Firefox className="h-4 w-4" />;
+      case 'firefox': return <Globe className="h-4 w-4" />;
+      case 'edge': return <Monitor className="h-4 w-4" />;
+      case 'safari': return <Monitor className="h-4 w-4" />;
       default: return <Monitor className="h-4 w-4" />;
     }
   };
@@ -219,7 +223,7 @@ const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                     <Label>Default Browser</Label>
                     <Select 
                       value={newWorkspace.defaultBrowser} 
-                      onValueChange={(value: 'chrome' | 'firefox') => 
+                      onValueChange={(value: BrowserType) => 
                         setNewWorkspace(prev => ({ ...prev, defaultBrowser: value }))
                       }
                     >
@@ -235,8 +239,20 @@ const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                         </SelectItem>
                         <SelectItem value="firefox">
                           <div className="flex items-center space-x-2">
-                            <Firefox className="h-4 w-4" />
+                            <Globe className="h-4 w-4" />
                             <span>Mozilla Firefox</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="edge">
+                          <div className="flex items-center space-x-2">
+                            <Monitor className="h-4 w-4" />
+                            <span>Microsoft Edge</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="safari">
+                          <div className="flex items-center space-x-2">
+                            <Monitor className="h-4 w-4" />
+                            <span>Safari</span>
                           </div>
                         </SelectItem>
                       </SelectContent>

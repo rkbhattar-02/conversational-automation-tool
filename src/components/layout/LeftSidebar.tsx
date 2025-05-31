@@ -1,3 +1,29 @@
+
+/**
+ * Left Sidebar Component
+ * 
+ * Purpose: Project explorer showing workspace files, test cases, and navigation tree
+ * 
+ * Dependencies:
+ * - React Router for navigation
+ * - shadcn/ui components for consistent UI
+ * - Workspace service for file management
+ * - Context menus for file operations
+ * 
+ * Connected Components:
+ * - AppLayout (parent container)
+ * - TestCaseEditor (navigation target)
+ * - WorkspaceManager (workspace context)
+ * 
+ * Features:
+ * - Hierarchical file tree navigation
+ * - Test case status indicators
+ * - Context menu operations (run, edit, delete)
+ * - Search functionality for tests
+ * - Collapsible folder structure
+ * - Quick action buttons
+ */
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -24,9 +50,11 @@ import {
   Trash2,
   FileEdit
 } from 'lucide-react';
+import { type Workspace } from '@/services/api/workspace-service';
 
 interface LeftSidebarProps {
   isOpen: boolean;
+  currentWorkspace?: Workspace | null;
 }
 
 interface TreeNode {
@@ -39,7 +67,7 @@ interface TreeNode {
   route?: string;
 }
 
-const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
+const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +76,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
   const [treeData, setTreeData] = useState<TreeNode[]>([
     {
       id: '1',
-      name: 'E-commerce Project',
+      name: currentWorkspace?.name || 'Demo Workspace',
       type: 'project',
       isExpanded: true,
       children: [
@@ -255,7 +283,14 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen }) => {
       
       {/* Tree View */}
       <div className="flex-1 overflow-y-auto p-2">
-        {treeData.map(node => renderTreeNode(node))}
+        {currentWorkspace ? (
+          treeData.map(node => renderTreeNode(node))
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <Folder className="h-8 w-8 mx-auto mb-2" />
+            <p className="text-sm">No workspace selected</p>
+          </div>
+        )}
       </div>
     </div>
   );

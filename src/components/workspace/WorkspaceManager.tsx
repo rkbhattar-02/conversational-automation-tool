@@ -1,4 +1,3 @@
-
 /**
  * Workspace Manager Component
  * 
@@ -52,7 +51,8 @@ interface WorkspaceManagerProps {
   currentWorkspaceId?: string;
 }
 
-type BrowserType = 'chrome' | 'firefox' | 'edge' | 'safari';
+// Use the same browser type as defined in workspace service
+type BrowserType = 'chrome' | 'firefox' | 'safari';
 
 const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
   onWorkspaceSelect,
@@ -130,7 +130,6 @@ const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     switch (browser) {
       case 'chrome': return <Chrome className="h-4 w-4" />;
       case 'firefox': return <Globe className="h-4 w-4" />;
-      case 'edge': return <Monitor className="h-4 w-4" />;
       case 'safari': return <Monitor className="h-4 w-4" />;
       default: return <Monitor className="h-4 w-4" />;
     }
@@ -241,12 +240,6 @@ const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                           <div className="flex items-center space-x-2">
                             <Globe className="h-4 w-4" />
                             <span>Mozilla Firefox</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="edge">
-                          <div className="flex items-center space-x-2">
-                            <Monitor className="h-4 w-4" />
-                            <span>Microsoft Edge</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="safari">

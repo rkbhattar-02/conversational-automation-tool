@@ -62,23 +62,22 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     enabled: !!currentWorkspace,
   });
 
-  // Fetch workspace files
-  const { data: files = [], isLoading: filesLoading } = useQuery({
-    queryKey: ['workspace-files', currentWorkspace?.id],
-    queryFn: () => currentWorkspace ? workspaceService.getFiles(currentWorkspace.id) : Promise.resolve([]),
-    enabled: !!currentWorkspace,
-  });
+  // Fetch workspace files - using the files from the workspace directly since getFiles doesn't exist
+  const files = currentWorkspace?.files || [];
+  const filesLoading = false;
 
   const handleStartExecution = async () => {
     if (!currentWorkspace) return;
     
     setIsExecuting(true);
     try {
-      await testExecutionService.startExecution(currentWorkspace.id, {
-        testFiles: files.filter(f => f.name.endsWith('.js')).map(f => f.id),
-        browser: currentWorkspace.settings.defaultBrowser,
-        parallel: false,
-      });
+      // Use executeTest instead of startExecution
+      const testFiles = files.filter(f => f.name.endsWith('.js'));
+      if (testFiles.length > 0) {
+        await testExecutionService.executeTest(testFiles[0].id, {
+          browser: currentWorkspace.settings.defaultBrowser,
+        });
+      }
     } catch (error) {
       console.error('Failed to start execution:', error);
     } finally {

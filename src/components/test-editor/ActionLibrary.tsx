@@ -1,6 +1,4 @@
 
-import React from 'react';
-
 export interface TestAction {
   name: string;
   description: string;

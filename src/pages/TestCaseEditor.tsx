@@ -126,6 +126,15 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
     return enhancedSteps.map(step => step.content).filter(content => content.trim()).join('\n');
   };
 
+  const handleCodeChange = (code: string) => {
+    const lines = code.split('\n').filter(line => line.trim());
+    const newSteps = lines.map((line, index) => ({
+      id: `step-${index + 1}`,
+      content: line.trim()
+    }));
+    setEnhancedSteps(newSteps);
+  };
+
   const renderMainContent = () => {
     switch (viewMode) {
       case 'enhanced':
@@ -150,7 +159,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
         return (
           <TestCodeView
             code={generateCodeFromSteps()}
-            onChange={() => {}}
+            onChange={handleCodeChange}
           />
         );
       default:

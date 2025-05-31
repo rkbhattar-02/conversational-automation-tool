@@ -37,7 +37,6 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
   useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus();
-      // Place cursor at end of text
       const length = inputRef.current.value.length;
       inputRef.current.setSelectionRange(length, length);
     }
@@ -87,11 +86,9 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
     
     // Determine suggestion type based on context
     if (words.length === 1 || textBeforeCursor.trim() === '') {
-      // First word or empty - likely an action
       setSuggestionType('action');
       setSearchTerm(currentWord);
     } else {
-      // Subsequent words - likely an object
       setSuggestionType('object');
       setSearchTerm(currentWord);
     }

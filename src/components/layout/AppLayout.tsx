@@ -1,12 +1,41 @@
 
+/**
+ * Application Layout Component
+ * 
+ * Purpose: Main layout wrapper providing consistent structure for the application
+ * 
+ * Dependencies:
+ * - React Router for navigation context
+ * - Custom layout components (navigation, sidebars, status bar)
+ * - Workspace context for current workspace state
+ * 
+ * Connected Components:
+ * - TopNavigation (header with workspace info and actions)
+ * - LeftSidebar (workspace files and navigation)
+ * - RightSidebar (properties and tools)
+ * - BottomStatusBar (status and execution info)
+ * - All page components via Outlet
+ * 
+ * Features:
+ * - Responsive sidebar management
+ * - Workspace context distribution
+ * - Layout state persistence
+ * - Keyboard shortcuts for layout controls
+ */
+
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopNavigation from './TopNavigation';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
 import BottomStatusBar from './BottomStatusBar';
+import { type Workspace } from '@/services/api/workspace-service';
 
-const AppLayout = () => {
+interface AppLayoutProps {
+  currentWorkspace?: Workspace | null;
+}
+
+const AppLayout: React.FC<AppLayoutProps> = ({ currentWorkspace }) => {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
 
@@ -14,6 +43,7 @@ const AppLayout = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Navigation */}
       <TopNavigation
+        currentWorkspace={currentWorkspace}
         onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
         onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
       />
@@ -21,7 +51,10 @@ const AppLayout = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar */}
-        <LeftSidebar isOpen={leftSidebarOpen} />
+        <LeftSidebar 
+          isOpen={leftSidebarOpen} 
+          currentWorkspace={currentWorkspace}
+        />
         
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-white">
@@ -29,11 +62,14 @@ const AppLayout = () => {
         </main>
         
         {/* Right Sidebar */}
-        <RightSidebar isOpen={rightSidebarOpen} />
+        <RightSidebar 
+          isOpen={rightSidebarOpen}
+          currentWorkspace={currentWorkspace}
+        />
       </div>
       
       {/* Bottom Status Bar */}
-      <BottomStatusBar />
+      <BottomStatusBar currentWorkspace={currentWorkspace} />
     </div>
   );
 };

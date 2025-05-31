@@ -10,8 +10,10 @@ interface TestStepInputProps {
   onEnter: () => void;
   onBackspace: () => void;
   onFocus?: () => void;
+  onTab?: (direction: 'forward' | 'backward') => void;
   placeholder?: string;
   autoFocus?: boolean;
+  isLastStep?: boolean;
 }
 
 const TestStepInput: React.FC<TestStepInputProps> = ({
@@ -21,8 +23,10 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
   onEnter,
   onBackspace,
   onFocus,
+  onTab,
   placeholder = "Type a test step...",
-  autoFocus = false
+  autoFocus = false,
+  isLastStep = false
 }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionType, setSuggestionType] = useState<'action' | 'object'>('action');
@@ -33,6 +37,9 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
   useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus();
+      // Place cursor at end of text
+      const length = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(length, length);
     }
   }, [autoFocus]);
 
@@ -55,6 +62,7 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
         onEnter();
         break;
       case 'Backspace':
+        // Only delete step if input is empty
         if (value === '') {
           e.preventDefault();
           onBackspace();
@@ -62,7 +70,9 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
         break;
       case 'Tab':
         e.preventDefault();
-        // Focus next step (handled by parent)
+        if (onTab) {
+          onTab(e.shiftKey ? 'backward' : 'forward');
+        }
         break;
     }
   };
@@ -76,8 +86,8 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
     const currentWord = words[words.length - 1];
     
     // Determine suggestion type based on context
-    if (words.length === 1) {
-      // First word - likely an action
+    if (words.length === 1 || textBeforeCursor.trim() === '') {
+      // First word or empty - likely an action
       setSuggestionType('action');
       setSearchTerm(currentWord);
     } else {
@@ -117,9 +127,9 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
   };
 
   return (
-    <div className="flex items-center space-x-3 group">
+    <div className="flex items-center space-x-3 group animate-fade-in">
       {/* Step Number */}
-      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
+      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0 transition-colors group-hover:bg-blue-200">
         {stepNumber}
       </div>
       
@@ -139,14 +149,20 @@ const TestStepInput: React.FC<TestStepInputProps> = ({
             onKeyDown={handleKeyDown}
             onFocus={onFocus}
             placeholder={placeholder}
-            className="font-mono text-sm border-gray-200 focus:border-blue-500 transition-colors"
+            className="font-mono text-sm border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
           />
         </SuggestionPopover>
       </div>
       
-      {/* Hint */}
-      <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        Ctrl+Space for suggestions
+      {/* Enhanced Hint */}
+      <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 min-w-0">
+        <div className="hidden lg:block">
+          <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs mr-1">Ctrl+Space</kbd>
+          <span>for suggestions</span>
+        </div>
+        <div className="lg:hidden">
+          <span>Ctrl+Space</span>
+        </div>
       </div>
     </div>
   );

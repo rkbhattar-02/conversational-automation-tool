@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,29 +81,6 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
     { id: 'step-6', content: 'waitFor userProfile' },
     { id: 'step-7', content: 'assert userProfile visible' }
   ]);
-  
-  const [testSets, setTestSets] = useState<TestSet[]>([
-    {
-      id: 'set1',
-      name: 'Authentication Tests',
-      selected: false,
-      testCases: [
-        { id: 'tc1', name: 'Login Flow Test', selected: false },
-        { id: 'tc2', name: 'Registration Flow', selected: false },
-        { id: 'tc3', name: 'Password Reset', selected: false }
-      ]
-    },
-    {
-      id: 'set2',
-      name: 'Shopping Cart Tests',
-      selected: false,
-      testCases: [
-        { id: 'tc4', name: 'Add to Cart', selected: false },
-        { id: 'tc5', name: 'Remove from Cart', selected: false },
-        { id: 'tc6', name: 'Checkout Process', selected: false }
-      ]
-    }
-  ]);
 
   const [steps, setSteps] = useState<TestStep[]>([
     {
@@ -146,38 +124,6 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
       status: 'pending'
     }
   ]);
-
-  const handleTestSetSelection = (setId: string, checked: boolean) => {
-    setTestSets(prev => prev.map(set => {
-      if (set.id === setId) {
-        return {
-          ...set,
-          selected: checked,
-          testCases: set.testCases.map(tc => ({ ...tc, selected: checked }))
-        };
-      }
-      return set;
-    }));
-  };
-
-  const handleTestCaseSelection = (setId: string, caseId: string, checked: boolean) => {
-    setTestSets(prev => prev.map(set => {
-      if (set.id === setId) {
-        const updatedTestCases = set.testCases.map(tc => 
-          tc.id === caseId ? { ...tc, selected: checked } : tc
-        );
-        const allSelected = updatedTestCases.every(tc => tc.selected);
-        const noneSelected = updatedTestCases.every(tc => !tc.selected);
-        
-        return {
-          ...set,
-          selected: allSelected,
-          testCases: updatedTestCases
-        };
-      }
-      return set;
-    }));
-  };
 
   const handleStepSelection = (stepId: string, checked: boolean) => {
     if (checked) {
@@ -229,14 +175,9 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
     return enhancedSteps.map(step => step.content).filter(content => content.trim()).join('\n');
   };
 
-  const commonActions = [
-    'Launch', 'Navigate', 'Click', 'Input', 'Select', 'Verify', 'Wait', 
-    'If', 'Then', 'Else', 'Loop', 'Call', 'Screenshot'
-  ];
-
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
+      {/* Simplified Header - Test Selection Removed */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1 max-w-2xl">
@@ -304,35 +245,6 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
             className="mt-1"
             placeholder="Enter test case description..."
           />
-        </div>
-
-        {/* Test Sets and Cases Selection */}
-        <div className="mt-4">
-          <Label className="text-sm font-medium mb-2 block">Test Selection</Label>
-          <div className="space-y-3 max-h-32 overflow-y-auto border rounded-md p-3 bg-gray-50">
-            {testSets.map(testSet => (
-              <div key={testSet.id} className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={testSet.selected}
-                    onCheckedChange={(checked) => handleTestSetSelection(testSet.id, checked as boolean)}
-                  />
-                  <span className="font-medium text-sm">{testSet.name}</span>
-                </div>
-                <div className="ml-6 space-y-1">
-                  {testSet.testCases.map(testCase => (
-                    <div key={testCase.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={testCase.selected}
-                        onCheckedChange={(checked) => handleTestCaseSelection(testSet.id, testCase.id, checked as boolean)}
-                      />
-                      <span className="text-sm text-gray-600">{testCase.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -458,7 +370,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
           
           <ResizableHandle withHandle />
           
-          {/* Properties Panel */}
+          {/* Enhanced Properties Panel */}
           <ResizablePanel defaultSize={30} minSize={25}>
             <div className="h-full bg-white border-l border-gray-200">
               <div className="p-4 border-b border-gray-200">
@@ -499,6 +411,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
                   <div className="space-y-2 text-sm">
                     <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Enter</kbd> - New step</div>
                     <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Backspace</kbd> - Delete empty step</div>
+                    <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Tab</kbd> - Navigate steps</div>
                     <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl+Space</kbd> - Suggestions</div>
                     <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">↑↓</kbd> - Navigate suggestions</div>
                   </div>

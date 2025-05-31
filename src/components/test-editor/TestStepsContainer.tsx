@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import TestStepInput from './TestStepInput';
@@ -20,9 +20,9 @@ const TestStepsContainer: React.FC<TestStepsContainerProps> = ({
 }) => {
   const [focusedStepId, setFocusedStepId] = useState<string | null>(null);
 
-  const addStep = (afterIndex?: number) => {
+  const addStep = useCallback((afterIndex?: number) => {
     const newStep: TestStep = {
-      id: `step-${Date.now()}`,
+      id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       content: ''
     };
     
@@ -32,11 +32,14 @@ const TestStepsContainer: React.FC<TestStepsContainerProps> = ({
     
     onStepsChange(newSteps);
     setFocusedStepId(newStep.id);
-  };
+  }, [steps, onStepsChange]);
 
-  const removeStep = (stepId: string) => {
+  const removeStep = useCallback((stepId: string) => {
     const stepIndex = steps.findIndex(s => s.id === stepId);
     if (stepIndex === -1) return;
+    
+    // Prevent deletion of the last step
+    if (steps.length === 1) return;
     
     const newSteps = steps.filter(s => s.id !== stepId);
     onStepsChange(newSteps);
@@ -48,33 +51,55 @@ const TestStepsContainer: React.FC<TestStepsContainerProps> = ({
         setFocusedStepId(newSteps[focusIndex].id);
       }
     }
-  };
+  }, [steps, onStepsChange]);
 
-  const updateStep = (stepId: string, content: string) => {
+  const updateStep = useCallback((stepId: string, content: string) => {
     const newSteps = steps.map(step =>
       step.id === stepId ? { ...step, content } : step
     );
     onStepsChange(newSteps);
-  };
+  }, [steps, onStepsChange]);
 
-  const handleStepEnter = (stepId: string) => {
+  const handleStepEnter = useCallback((stepId: string) => {
     const stepIndex = steps.findIndex(s => s.id === stepId);
     addStep(stepIndex);
-  };
+  }, [steps, addStep]);
 
-  const handleStepBackspace = (stepId: string) => {
+  const handleStepBackspace = useCallback((stepId: string) => {
     const step = steps.find(s => s.id === stepId);
     if (step && step.content === '') {
       removeStep(stepId);
     }
-  };
+  }, [steps, removeStep]);
+
+  const handleStepTab = useCallback((stepId: string, direction: 'forward' | 'backward') => {
+    const currentIndex = steps.findIndex(s => s.id === stepId);
+    if (currentIndex === -1) return;
+
+    let targetIndex;
+    if (direction === 'forward') {
+      targetIndex = currentIndex + 1;
+      // If at last step, create new step
+      if (targetIndex >= steps.length) {
+        addStep(currentIndex);
+        return;
+      }
+    } else {
+      targetIndex = currentIndex - 1;
+      if (targetIndex < 0) return;
+    }
+
+    if (steps[targetIndex]) {
+      setFocusedStepId(steps[targetIndex].id);
+    }
+  }, [steps, addStep]);
 
   // Ensure we have at least one step
-  if (steps.length === 0) {
-    React.useEffect(() => {
+  React.useEffect(() => {
+    if (steps.length === 0) {
       addStep();
-    }, []);
-  }
+    }
+  }, [steps.length, addStep]);
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -84,7 +109,7 @@ const TestStepsContainer: React.FC<TestStepsContainerProps> = ({
         <Button 
           onClick={() => addStep()} 
           size="sm" 
-          className="flex items-center space-x-1"
+          className="flex items-center space-x-1 hover:scale-105 transition-transform"
         >
           <Plus className="h-4 w-4" />
           <span>Add Step</span>
@@ -101,11 +126,13 @@ const TestStepsContainer: React.FC<TestStepsContainerProps> = ({
               onChange={(content) => updateStep(step.id, content)}
               onEnter={() => handleStepEnter(step.id)}
               onBackspace={() => handleStepBackspace(step.id)}
+              onTab={(direction) => handleStepTab(step.id, direction)}
               onFocus={() => setFocusedStepId(step.id)}
               autoFocus={focusedStepId === step.id}
+              isLastStep={index === steps.length - 1}
             />
             
-            {/* Delete Button */}
+            {/* Delete Button - only show if more than one step */}
             {steps.length > 1 && (
               <Button
                 variant="ghost"
@@ -125,18 +152,19 @@ const TestStepsContainer: React.FC<TestStepsContainerProps> = ({
         <Button
           variant="outline"
           onClick={() => addStep()}
-          className="w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-blue-600 hover:border-blue-300"
+          className="w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-colors"
         >
           <Plus className="h-4 w-4" />
           <span>Add Step</span>
         </Button>
       </div>
       
-      {/* Keyboard Shortcuts Help */}
+      {/* Enhanced Keyboard Shortcuts Help */}
       <div className="px-4 pb-4">
         <div className="text-xs text-gray-500 space-y-1">
           <div>• <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Enter</kbd> - Add new step</div>
           <div>• <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Backspace</kbd> - Delete empty step</div>
+          <div>• <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Tab</kbd> - Navigate between steps</div>
           <div>• <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl + Space</kbd> - Show suggestions</div>
         </div>
       </div>

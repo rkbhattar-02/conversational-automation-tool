@@ -51,7 +51,7 @@ interface WorkspaceManagerProps {
   currentWorkspaceId?: string;
 }
 
-// Use the same browser type as defined in workspace service
+// Use the same browser type as defined in workspace service - only chrome, firefox, safari
 type BrowserType = 'chrome' | 'firefox' | 'safari';
 
 const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({

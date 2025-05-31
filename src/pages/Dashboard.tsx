@@ -1,3 +1,4 @@
+
 /**
  * Dashboard Component
  * 
@@ -62,7 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     enabled: !!currentWorkspace,
   });
 
-  // Fetch workspace files - using the files from the workspace directly since getFiles doesn't exist
+  // Use workspace files directly - no getFiles method exists
   const files = currentWorkspace?.files || [];
   const filesLoading = false;
 
@@ -71,7 +72,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     
     setIsExecuting(true);
     try {
-      // Use executeTest instead of startExecution
+      // Use executeTest method that exists in the service
       const testFiles = files.filter(f => f.name.endsWith('.js'));
       if (testFiles.length > 0) {
         await testExecutionService.executeTest(testFiles[0].id, {

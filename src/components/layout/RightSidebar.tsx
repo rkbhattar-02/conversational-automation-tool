@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +18,14 @@ import {
   Activity,
   Brain
 } from 'lucide-react';
+import { type Workspace } from '@/services/api/workspace-service';
 
 interface RightSidebarProps {
   isOpen: boolean;
+  currentWorkspace?: Workspace | null;
 }
 
-const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen }) => {
+const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, currentWorkspace }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [objectsExpanded, setObjectsExpanded] = useState(true);
   const [dataExpanded, setDataExpanded] = useState(false);

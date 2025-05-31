@@ -1,355 +1,352 @@
-
 /**
- * Dashboard Page Component
+ * Dashboard Component
  * 
- * Purpose: Main dashboard providing overview of test automation activities and workspace metrics
+ * Purpose: Main dashboard displaying workspace overview, recent activities, and quick actions
  * 
  * Dependencies:
- * - testExecutionService for execution data and statistics
- * - workspaceService for workspace information
- * - UI components for data visualization
- * - React Query for data fetching and caching
+ * - workspaceService for workspace operations
+ * - test-execution-service for test data
+ * - UI components from shadcn/ui
+ * - React Query for data management
  * 
  * Connected Components:
- * - AppLayout (parent layout)
- * - Various UI cards and charts for data display
- * - Navigation to TestCaseEditor and other features
+ * - App.tsx (receives currentWorkspace prop)
+ * - AppLayout.tsx (layout wrapper)
+ * - Various dashboard widgets and components
  * 
  * Features:
- * - Real-time execution statistics
+ * - Workspace overview statistics
  * - Recent test execution history
- * - Workspace file overview
  * - Quick action buttons
- * - Performance trend visualization
- * - Demo data for new user experience
+ * - File system navigation
+ * - Test execution controls
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Activity,
-  CheckCircle,
-  XCircle,
-  Clock,
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Play, 
+  Pause, 
+  Square, 
+  FileText, 
+  FolderOpen, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle,
   TrendingUp,
   Users,
-  FileText,
-  Play,
-  Plus,
-  BarChart3,
-  FolderOpen,
-  Settings
+  Calendar,
+  Activity
 } from 'lucide-react';
-import { testExecutionService } from '@/services/api/test-execution-service';
-import { type Workspace } from '@/services/api/workspace-service';
-import { useNavigate } from 'react-router-dom';
+import { workspaceService, type Workspace } from '@/services/api/workspace-service';
+import { testExecutionService, type TestExecution } from '@/services/api/test-execution-service';
 
 interface DashboardProps {
   currentWorkspace?: Workspace | null;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
-  const navigate = useNavigate();
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [selectedExecution, setSelectedExecution] = useState<string | null>(null);
 
-  // Fetch execution summary
-  const { data: executionSummary } = useQuery({
-    queryKey: ['execution-summary', currentWorkspace?.id],
-    queryFn: () => currentWorkspace ? 
-      testExecutionService.getExecutionSummary(currentWorkspace.id) : 
-      Promise.resolve({
-        totalTests: 0,
-        passedTests: 0,
-        failedTests: 0,
-        skippedTests: 0,
-        totalDuration: 0,
-        successRate: 0,
-      }),
+  // Fetch test executions for the current workspace
+  const { data: executions = [], isLoading: executionsLoading } = useQuery({
+    queryKey: ['executions', currentWorkspace?.id],
+    queryFn: () => currentWorkspace ? testExecutionService.getExecutions(currentWorkspace.id) : Promise.resolve([]),
     enabled: !!currentWorkspace,
   });
 
-  // Fetch recent executions
-  const { data: recentExecutions = [] } = useQuery({
-    queryKey: ['recent-executions', currentWorkspace?.id],
-    queryFn: () => currentWorkspace ? 
-      testExecutionService.getExecutions(currentWorkspace.id, 5) : 
-      Promise.resolve([]),
+  // Fetch workspace files
+  const { data: files = [], isLoading: filesLoading } = useQuery({
+    queryKey: ['workspace-files', currentWorkspace?.id],
+    queryFn: () => currentWorkspace ? workspaceService.getFiles(currentWorkspace.id) : Promise.resolve([]),
     enabled: !!currentWorkspace,
   });
+
+  const handleStartExecution = async () => {
+    if (!currentWorkspace) return;
+    
+    setIsExecuting(true);
+    try {
+      await testExecutionService.startExecution(currentWorkspace.id, {
+        testFiles: files.filter(f => f.name.endsWith('.js')).map(f => f.id),
+        browser: currentWorkspace.settings.defaultBrowser,
+        parallel: false,
+      });
+    } catch (error) {
+      console.error('Failed to start execution:', error);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'passed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'passed': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'running': return <Activity className="h-4 w-4 text-blue-500 animate-spin" />;
+      default: return <AlertCircle className="h-4 w-4 text-yellow-500" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'passed':
-        return <Badge className="bg-green-100 text-green-800">Passed</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
-      default:
-        return <Badge className="bg-yellow-100 text-yellow-800">Running</Badge>;
+      case 'passed': return 'bg-green-500';
+      case 'failed': return 'bg-red-500';
+      case 'running': return 'bg-blue-500';
+      default: return 'bg-yellow-500';
     }
   };
 
-  const formatDuration = (duration: number) => {
-    const minutes = Math.floor(duration / 60000);
-    const seconds = Math.floor((duration % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Show workspace selection message if no workspace is selected
   if (!currentWorkspace) {
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <FolderOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">No Workspace Selected</h2>
-          <p className="text-gray-600 mb-6">
-            Please select or create a workspace to view your test automation dashboard
-          </p>
-          <Button onClick={() => navigate('/workspaces')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Manage Workspaces
-          </Button>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <FolderOpen className="h-12 w-12 text-gray-400 mx-auto" />
+          <h3 className="text-lg font-medium text-gray-900">No workspace selected</h3>
+          <p className="text-gray-600">Select a workspace to view the dashboard</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">
-            Overview of {currentWorkspace.name} test automation activities
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">{currentWorkspace.name}</h1>
+          <p className="text-gray-600 mt-1">{currentWorkspace.description}</p>
         </div>
-        <div className="flex space-x-3">
-          <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-            <Plus className="h-4 w-4 mr-2" />
-            New Test
-          </Button>
-          <Button variant="outline">
+        <div className="flex space-x-2">
+          <Button
+            onClick={handleStartExecution}
+            disabled={isExecuting || files.length === 0}
+            className="bg-green-600 hover:bg-green-700"
+          >
             <Play className="h-4 w-4 mr-2" />
-            Run Suite
+            {isExecuting ? 'Running...' : 'Run Tests'}
+          </Button>
+          <Button variant="outline" disabled={!isExecuting}>
+            <Square className="h-4 w-4 mr-2" />
+            Stop
           </Button>
         </div>
       </div>
 
-      {/* Workspace Info Card */}
-      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FolderOpen className="h-5 w-5 mr-2 text-blue-600" />
-            Current Workspace: {currentWorkspace.name}
-          </CardTitle>
-          <CardDescription>
-            {currentWorkspace.description || 'No description provided'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Files:</span> {currentWorkspace.files.length}
-            </div>
-            <div>
-              <span className="font-medium">Default Browser:</span> {currentWorkspace.settings.defaultBrowser}
-            </div>
-            <div>
-              <span className="font-medium">Last Modified:</span> {' '}
-              {new Intl.DateTimeFormat('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              }).format(currentWorkspace.lastModified)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover:shadow-lg transition-shadow">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tests</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Test Cases</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{executionSummary?.totalTests || 0}</div>
+            <div className="text-2xl font-bold">{files.filter(f => f.name.endsWith('.js')).length}</div>
             <p className="text-xs text-muted-foreground">
-              {currentWorkspace.files.length} test files available
+              +2 from last week
             </p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Passed Today</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {executionSummary?.passedTests || 0}
-            </div>
+            <div className="text-2xl font-bold">94.2%</div>
             <p className="text-xs text-muted-foreground">
-              {executionSummary?.successRate.toFixed(1) || 0}% success rate
+              +1.2% from last week
             </p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed Today</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {executionSummary?.failedTests || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Issues need attention
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Execution Time</CardTitle>
+            <CardTitle className="text-sm font-medium">Last Execution</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {executionSummary ? formatDuration(executionSummary.totalDuration) : '0m 0s'}
-            </div>
+            <div className="text-2xl font-bold">2h ago</div>
             <p className="text-xs text-muted-foreground">
-              Total today
+              15 tests passed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">4:32</div>
+            <p className="text-xs text-muted-foreground">
+              -0:15 from last week
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Executions */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              Recent Test Executions
-            </CardTitle>
-            <CardDescription>
-              Latest test runs and their results
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentExecutions.length === 0 ? (
-              <div className="text-center py-8">
-                <Play className="h-8 w-8 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">No test executions yet</p>
-                <Button variant="outline" onClick={() => navigate('/test-editor')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Test
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentExecutions.map((execution) => (
-                  <div
-                    key={execution.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(execution.status)}
-                      <div>
-                        <p className="font-medium text-sm">{execution.testCaseName}</p>
-                        <p className="text-xs text-gray-600">
-                          Duration: {execution.duration ? formatDuration(execution.duration) : 'N/A'} • {' '}
-                          {new Intl.RelativeTimeFormat('en').format(
-                            Math.floor((execution.startTime.getTime() - Date.now()) / (1000 * 60)),
-                            'minute'
-                          )}
-                        </p>
+      {/* Main Content */}
+      <Tabs defaultValue="executions" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="executions">Recent Executions</TabsTrigger>
+          <TabsTrigger value="files">Test Files</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="executions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Test Execution History</CardTitle>
+              <CardDescription>
+                Recent test runs and their results
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {executionsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse flex space-x-4">
+                      <div className="rounded-full bg-gray-200 h-10 w-10"></div>
+                      <div className="flex-1 space-y-2 py-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(execution.status)}
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
+                  ))}
+                </div>
+              ) : executions.length === 0 ? (
+                <div className="text-center py-8">
+                  <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No executions yet</h3>
+                  <p className="text-gray-600 mb-4">Run your first test to see execution history</p>
+                  <Button onClick={handleStartExecution} disabled={files.length === 0}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Start First Test
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {executions.slice(0, 5).map((execution) => (
+                    <div 
+                      key={execution.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedExecution(execution.id)}
+                    >
+                      <div className="flex items-center space-x-4">
+                        {getStatusIcon(execution.status)}
+                        <div>
+                          <div className="font-medium">Execution #{execution.id.slice(0, 8)}</div>
+                          <div className="text-sm text-gray-500">
+                            {execution.testCount} tests • {formatDuration(execution.duration)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <Badge 
+                          variant={execution.status === 'passed' ? 'default' : 'destructive'}
+                          className={getStatusColor(execution.status)}
+                        >
+                          {execution.status}
+                        </Badge>
+                        <div className="text-sm text-gray-500">
+                          {new Date(execution.startTime).toLocaleString()}
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="files" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Test Files</CardTitle>
+              <CardDescription>
+                Manage your test automation files
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {filesLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse flex space-x-4">
+                      <div className="rounded bg-gray-200 h-8 w-8"></div>
+                      <div className="flex-1 space-y-2 py-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {files.map((file) => (
+                    <div key={file.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                      <FileText className="h-4 w-4 text-blue-500" />
+                      <span className="flex-1">{file.name}</span>
+                      <span className="text-sm text-gray-500">{file.path}</span>
+                    </div>
+                  ))}
+                  {files.length === 0 && (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No files yet</h3>
+                      <p className="text-gray-600">Create your first test file to get started</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Success Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Passed</span>
+                    <span>94.2%</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <Progress value={94.2} className="h-2" />
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>
-              Common tasks and shortcuts
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              className="w-full justify-start" 
-              variant="outline"
-              onClick={() => navigate('/test-editor')}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create New Test
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <Play className="h-4 w-4 mr-2" />
-              Run Test Suite
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              View Analytics
-            </Button>
-            <Button 
-              className="w-full justify-start" 
-              variant="outline"
-              onClick={() => navigate('/workspaces')}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Workspace Settings
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Trends */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <TrendingUp className="h-5 w-5 mr-2" />
-            Performance Trends
-          </CardTitle>
-          <CardDescription>
-            Test execution trends over the last 7 days
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-32 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg flex items-center justify-center">
-            <p className="text-gray-600">Chart visualization will be implemented with real execution data</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Average Execution Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">4:32</div>
+                <p className="text-sm text-gray-500">Average across all test runs</p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

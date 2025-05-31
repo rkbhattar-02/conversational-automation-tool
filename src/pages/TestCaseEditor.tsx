@@ -34,6 +34,7 @@ import {
   Code
 } from 'lucide-react';
 import MonacoEditor from './components/MonacoEditor';
+import TestStepsContainer from '@/components/test-editor/TestStepsContainer';
 import { type Workspace } from '@/services/api/workspace-service';
 
 interface TestCaseEditorProps {
@@ -66,8 +67,19 @@ interface TestSet {
 const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => {
   const [testCaseName, setTestCaseName] = useState('Login Flow Test');
   const [description, setDescription] = useState('Verify user can login with valid credentials');
-  const [viewMode, setViewMode] = useState<'table' | 'code'>('table');
+  const [viewMode, setViewMode] = useState<'enhanced' | 'table' | 'code'>('enhanced');
   const [selectedSteps, setSelectedSteps] = useState<string[]>([]);
+  
+  // Enhanced test steps for the new interface
+  const [enhancedSteps, setEnhancedSteps] = useState<{id: string, content: string}[]>([
+    { id: 'step-1', content: 'launch chrome' },
+    { id: 'step-2', content: 'navigate "https://app.example.com/login"' },
+    { id: 'step-3', content: 'type emailInput "testuser@example.com"' },
+    { id: 'step-4', content: 'type passwordInput "password123"' },
+    { id: 'step-5', content: 'click loginButton' },
+    { id: 'step-6', content: 'waitFor userProfile' },
+    { id: 'step-7', content: 'assert userProfile visible' }
+  ]);
   
   const [testSets, setTestSets] = useState<TestSet[]>([
     {
@@ -214,10 +226,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
   };
 
   const generateCodeFromSteps = () => {
-    return steps.map(step => {
-      const params = step.parameters ? ` ${step.parameters}` : '';
-      return `${step.action} ${step.object}${params}`;
-    }).join('\n');
+    return enhancedSteps.map(step => step.content).filter(content => content.trim()).join('\n');
   };
 
   const commonActions = [
@@ -244,6 +253,15 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
           
           <div className="flex items-center space-x-2">
             <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'enhanced' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('enhanced')}
+                className="flex items-center space-x-1"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Enhanced</span>
+              </Button>
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
@@ -324,7 +342,12 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
           {/* Test Steps Panel */}
           <ResizablePanel defaultSize={70} minSize={50}>
             <div className="h-full flex flex-col">
-              {viewMode === 'table' ? (
+              {viewMode === 'enhanced' ? (
+                <TestStepsContainer
+                  steps={enhancedSteps}
+                  onStepsChange={setEnhancedSteps}
+                />
+              ) : viewMode === 'table' ? (
                 <div className="flex-1 overflow-hidden bg-white">
                   <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 className="text-lg font-semibold">Test Steps</h3>
@@ -439,50 +462,45 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => 
           <ResizablePanel defaultSize={30} minSize={25}>
             <div className="h-full bg-white border-l border-gray-200">
               <div className="p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold">Step Properties</h3>
+                <h3 className="text-lg font-semibold">Smart Assistance Guide</h3>
               </div>
               
               <div className="p-4 space-y-4">
                 <div>
-                  <Label className="text-sm font-medium">Action Type</Label>
+                  <Label className="text-sm font-medium">Enhanced Editor Features</Label>
                   <p className="text-sm text-gray-600 mt-1">
-                    Defines what operation to perform on the target object
+                    Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl + Space</kbd> for smart suggestions
                   </p>
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-medium">Object Reference</Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Reference to an object in the repository or a direct locator
-                  </p>
+                  <Label className="text-sm font-medium">Common Actions</Label>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div><span className="text-blue-600 font-mono">click</span> - Click on element</div>
+                    <div><span className="text-blue-600 font-mono">type</span> - Enter text into field</div>
+                    <div><span className="text-blue-600 font-mono">navigate</span> - Go to URL</div>
+                    <div><span className="text-blue-600 font-mono">assert</span> - Verify condition</div>
+                    <div><span className="text-blue-600 font-mono">waitFor</span> - Wait for element</div>
+                  </div>
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-medium">Parameters</Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Additional data required for the action (text input, options, etc.)
-                  </p>
+                  <Label className="text-sm font-medium">Page Objects</Label>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div><span className="text-purple-600 font-mono">loginButton</span></div>
+                    <div><span className="text-purple-600 font-mono">emailInput</span></div>
+                    <div><span className="text-purple-600 font-mono">passwordInput</span></div>
+                    <div><span className="text-purple-600 font-mono">submitButton</span></div>
+                  </div>
                 </div>
                 
                 <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-medium mb-2">Syntax Guide</h4>
+                  <h4 className="font-medium mb-2">Keyboard Shortcuts</h4>
                   <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-blue-600 font-mono">Launch</span>
-                      <span className="text-gray-600"> - Start browser or application</span>
-                    </div>
-                    <div>
-                      <span className="text-blue-600 font-mono">Navigate</span>
-                      <span className="text-gray-600"> - Go to URL</span>
-                    </div>
-                    <div>
-                      <span className="text-blue-600 font-mono">Click</span>
-                      <span className="text-gray-600"> - Click on element</span>
-                    </div>
-                    <div>
-                      <span className="text-blue-600 font-mono">Input</span>
-                      <span className="text-gray-600"> - Enter text</span>
-                    </div>
+                    <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Enter</kbd> - New step</div>
+                    <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Backspace</kbd> - Delete empty step</div>
+                    <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl+Space</kbd> - Suggestions</div>
+                    <div><kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">↑↓</kbd> - Navigate suggestions</div>
                   </div>
                 </div>
               </div>

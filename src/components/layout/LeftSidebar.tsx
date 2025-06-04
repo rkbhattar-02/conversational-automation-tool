@@ -37,6 +37,24 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ChevronRight,
   ChevronDown,
   Folder,
@@ -75,6 +93,9 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   
   const [treeData, setTreeData] = useState<TreeNode[]>([
     {
@@ -111,6 +132,76 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
       ]
     }
   ]);
+
+  const getSelectedFolders = (nodes: TreeNode[]): TreeNode[] => {
+    const selected: TreeNode[] = [];
+    
+    const traverse = (nodeList: TreeNode[]) => {
+      nodeList.forEach(node => {
+        if (node.selected && node.type === 'folder') {
+          selected.push(node);
+        }
+        if (node.children) {
+          traverse(node.children);
+        }
+      });
+    };
+    
+    traverse(nodes);
+    return selected;
+  };
+
+  const createNewFolder = () => {
+    if (!newFolderName.trim()) return;
+    
+    const newFolder: TreeNode = {
+      id: `folder-${Date.now()}`,
+      name: newFolderName,
+      type: 'folder',
+      isExpanded: false,
+      selected: false,
+      children: []
+    };
+    
+    setTreeData(prevData => {
+      return prevData.map(project => {
+        if (project.type === 'project') {
+          return {
+            ...project,
+            children: [...(project.children || []), newFolder]
+          };
+        }
+        return project;
+      });
+    });
+    
+    setNewFolderName('');
+    setShowCreateFolderDialog(false);
+  };
+
+  const deleteSelectedFolders = () => {
+    const removeSelectedFolders = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.filter(node => {
+        if (node.type === 'folder' && node.selected) {
+          return false; // Remove this folder
+        }
+        if (node.children) {
+          node.children = removeSelectedFolders(node.children);
+        }
+        return true;
+      });
+    };
+    
+    setTreeData(prevData => removeSelectedFolders(prevData));
+    setShowDeleteConfirmDialog(false);
+  };
+
+  const handleDeleteClick = () => {
+    const selectedFolders = getSelectedFolders(treeData);
+    if (selectedFolders.length > 0) {
+      setShowDeleteConfirmDialog(true);
+    }
+  };
 
   const updateNodeSelection = (nodes: TreeNode[], nodeId: string, selected: boolean): TreeNode[] => {
     return nodes.map(node => {
@@ -373,11 +464,28 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Project Explorer</h2>
-          <div className="flex space-x-1">
-            <Button variant="ghost" size="icon" className="h-6 w-6">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-gray-900">Project Explorer</h2>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={() => setShowCreateFolderDialog(true)}
+              title="Create New Folder"
+            >
               <Plus className="h-4 w-4" />
             </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={handleDeleteClick}
+              title="Delete Selected Folders"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex space-x-1">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -416,6 +524,58 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
           </div>
         )}
       </div>
+
+      {/* Create Folder Dialog */}
+      <Dialog open={showCreateFolderDialog} onOpenChange={setShowCreateFolderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new folder. It will be added to the project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Folder name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  createNewFolder();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateFolderDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={createNewFolder} disabled={!newFolderName.trim()}>
+              Create Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Folders</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deleting this will delete all the test cases and test steps within the selected folders. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteConfirmDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={deleteSelectedFolders} className="bg-red-600 hover:bg-red-700">
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

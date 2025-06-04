@@ -1,3 +1,4 @@
+
 /**
  * Left Sidebar Component
  * 
@@ -95,8 +96,10 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showCreateTestCaseDialog, setShowCreateTestCaseDialog] = useState(false);
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newTestCaseName, setNewTestCaseName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -246,6 +249,45 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     setParentFolderId(null);
   };
 
+  const createNewTestCase = () => {
+    if (!newTestCaseName.trim()) return;
+    
+    const newTestCase: TreeNode = {
+      id: `test-${Date.now()}`,
+      name: newTestCaseName,
+      type: 'test',
+      status: 'pending',
+      route: '/test-editor',
+      selected: false
+    };
+    
+    setTreeData(prevData => {
+      const addTestCaseToParent = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map(node => {
+          if (node.id === parentFolderId) {
+            return {
+              ...node,
+              children: [...(node.children || []), newTestCase]
+            };
+          }
+          if (node.children) {
+            return {
+              ...node,
+              children: addTestCaseToParent(node.children)
+            };
+          }
+          return node;
+        });
+      };
+      
+      return addTestCaseToParent(prevData);
+    });
+    
+    setNewTestCaseName('');
+    setShowCreateTestCaseDialog(false);
+    setParentFolderId(null);
+  };
+
   const deleteFolder = () => {
     if (!folderToDelete) return;
     
@@ -297,6 +339,11 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   const handleCreateFolder = (parentId: string) => {
     setParentFolderId(parentId);
     setShowCreateFolderDialog(true);
+  };
+
+  const handleCreateTestCase = (parentId: string) => {
+    setParentFolderId(parentId);
+    setShowCreateTestCaseDialog(true);
   };
 
   const handleDeleteSelectedFolders = () => {
@@ -545,33 +592,42 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                 )}
               </div>
 
-              {/* Action buttons for folders and project root */}
-              {(node.type === 'folder' || node.type === 'project') && !isEditing && (
+              {/* Action buttons */}
+              {!isEditing && (
                 <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Add button - different behavior for project vs folders */}
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 p-0 mr-1"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCreateFolder(node.id);
+                      if (node.type === 'project') {
+                        handleCreateFolder(node.id);
+                      } else if (node.type === 'folder') {
+                        handleCreateTestCase(node.id);
+                      }
                     }}
-                    title="Create New Folder"
+                    title={node.type === 'project' ? "Create New Folder" : "Create New Test Case"}
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSelectedFolders();
-                    }}
-                    title="Delete Selected Folders"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  
+                  {/* Delete button - only for project and folders */}
+                  {(node.type === 'project' || node.type === 'folder') && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSelectedFolders();
+                      }}
+                      title="Delete Selected Folders"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -691,6 +747,38 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
             </Button>
             <Button onClick={createNewFolder} disabled={!newFolderName.trim()}>
               Create Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Test Case Dialog */}
+      <Dialog open={showCreateTestCaseDialog} onOpenChange={setShowCreateTestCaseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Test Case</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new test case. It will be added to the selected folder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Test case name"
+              value={newTestCaseName}
+              onChange={(e) => setNewTestCaseName(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  createNewTestCase();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateTestCaseDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={createNewTestCase} disabled={!newTestCaseName.trim()}>
+              Create Test Case
             </Button>
           </DialogFooter>
         </DialogContent>

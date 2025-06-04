@@ -22,6 +22,7 @@
  * - Collapsible folder structure
  * - Quick action buttons
  * - Hierarchical checkbox selection
+ * - Inline editing for renaming folders and files
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -98,6 +99,9 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   const [newFolderName, setNewFolderName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
   
   const [treeData, setTreeData] = useState<TreeNode[]>([
     {
@@ -134,6 +138,56 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
       ]
     }
   ]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingNodeId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingNodeId]);
+
+  const startEditing = (nodeId: string, currentName: string) => {
+    setEditingNodeId(nodeId);
+    setEditingValue(currentName);
+  };
+
+  const cancelEditing = () => {
+    setEditingNodeId(null);
+    setEditingValue('');
+  };
+
+  const saveEditing = () => {
+    if (!editingNodeId || !editingValue.trim()) {
+      cancelEditing();
+      return;
+    }
+
+    setTreeData(prevData => {
+      const updateNodeName = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map(node => {
+          if (node.id === editingNodeId) {
+            return { ...node, name: editingValue.trim() };
+          }
+          if (node.children) {
+            return { ...node, children: updateNodeName(node.children) };
+          }
+          return node;
+        });
+      };
+      return updateNodeName(prevData);
+    });
+
+    cancelEditing();
+  };
+
+  const handleEditKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveEditing();
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
+  };
 
   const getSelectedFolders = (nodes: TreeNode[]): TreeNode[] => {
     const selected: TreeNode[] = [];
@@ -366,6 +420,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   const renderTreeNode = (node: TreeNode, level: number = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isSelected = selectedNode === node.id;
+    const isEditing = editingNodeId === node.id;
 
     return (
       <div key={node.id} className="select-none">
@@ -424,14 +479,32 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
               {/* Node Content */}
               <div 
                 className="flex items-center flex-1 min-w-0"
-                onClick={() => handleNodeClick(node)}
+                onClick={() => !isEditing && handleNodeClick(node)}
               >
-                <span className="truncate text-sm font-medium group-hover:text-gray-900 transition-colors">
-                  {node.name}
-                </span>
+                {isEditing ? (
+                  <Input
+                    ref={editInputRef}
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onKeyDown={handleEditKeyPress}
+                    onBlur={saveEditing}
+                    className="h-6 text-sm py-0 px-1 border-blue-500"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span 
+                    className="truncate text-sm font-medium group-hover:text-gray-900 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditing(node.id, node.name);
+                    }}
+                  >
+                    {node.name}
+                  </span>
+                )}
                 
                 {/* Status indicator */}
-                {node.status && (
+                {node.status && !isEditing && (
                   <div className="ml-auto flex items-center">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusColor(node.status)} bg-opacity-10`}>
                       {getStatusIcon(node.status)}
@@ -441,7 +514,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
               </div>
 
               {/* Action buttons for folders only */}
-              {node.type === 'folder' && (
+              {node.type === 'folder' && !isEditing && (
                 <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button
                     variant="ghost"

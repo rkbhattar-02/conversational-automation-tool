@@ -25,7 +25,7 @@
  * - Hierarchical checkbox selection
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -217,6 +217,31 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     }
   };
 
+  const CustomCheckbox: React.FC<{ 
+    checked?: boolean; 
+    indeterminate?: boolean; 
+    onChange: (checked: boolean) => void;
+    onClick: (e: React.MouseEvent) => void;
+  }> = ({ checked, indeterminate, onChange, onClick }) => {
+    const checkboxRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+      if (checkboxRef.current) {
+        checkboxRef.current.indeterminate = !!indeterminate;
+      }
+    }, [indeterminate]);
+
+    return (
+      <Checkbox
+        ref={checkboxRef}
+        checked={checked}
+        onCheckedChange={onChange}
+        onClick={onClick}
+        className="mr-3 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+      />
+    );
+  };
+
   const renderTreeNode = (node: TreeNode, level: number = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isSelected = selectedNode === node.id;
@@ -226,60 +251,71 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
         <ContextMenu>
           <ContextMenuTrigger>
             <div
-              className={`flex items-center py-1 px-2 rounded-md cursor-pointer transition-colors ${
-                isSelected ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100'
+              className={`flex items-center py-1.5 px-2 rounded-md cursor-pointer transition-all duration-200 group ${
+                isSelected ? 'bg-blue-50 text-blue-900 border border-blue-200' : 'hover:bg-gray-50'
               }`}
               style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
-              {/* Checkbox */}
-              <Checkbox
-                checked={node.selected}
-                ref={(ref) => {
-                  if (ref && node.indeterminate) {
-                    ref.indeterminate = true;
-                  }
-                }}
-                onCheckedChange={(checked) => handleCheckboxChange(node.id, checked as boolean)}
-                className="mr-2"
-                onClick={(e) => e.stopPropagation()}
-              />
-
-              {hasChildren && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 p-0 mr-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleExpanded(node.id);
-                  }}
-                >
-                  {node.isExpanded ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
+              {/* Integrated Checkbox with Icon Container */}
+              <div className="flex items-center mr-2">
+                <CustomCheckbox
+                  checked={node.selected}
+                  indeterminate={node.indeterminate}
+                  onChange={(checked) => handleCheckboxChange(node.id, checked as boolean)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                
+                {/* Expand/Collapse Button */}
+                {hasChildren && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 p-0 mr-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(node.id);
+                    }}
+                  >
+                    {node.isExpanded ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+                
+                {/* Icon with enhanced styling */}
+                <div className="flex items-center justify-center w-5 h-5 mr-2">
+                  {node.type === 'project' && (
+                    <Folder className="h-4 w-4 text-blue-600 group-hover:text-blue-700 transition-colors" />
                   )}
-                </Button>
-              )}
+                  {node.type === 'folder' && (
+                    node.isExpanded ? 
+                      <FolderOpen className="h-4 w-4 text-amber-600 group-hover:text-amber-700 transition-colors" /> :
+                      <Folder className="h-4 w-4 text-amber-600 group-hover:text-amber-700 transition-colors" />
+                  )}
+                  {node.type === 'test' && (
+                    <File className="h-4 w-4 text-gray-600 group-hover:text-gray-700 transition-colors" />
+                  )}
+                </div>
+              </div>
               
+              {/* Node Content */}
               <div 
                 className="flex items-center flex-1 min-w-0"
                 onClick={() => handleNodeClick(node)}
               >
-                {node.type === 'project' && <Folder className="h-4 w-4 mr-2 text-blue-600" />}
-                {node.type === 'folder' && (
-                  node.isExpanded ? 
-                    <FolderOpen className="h-4 w-4 mr-2 text-yellow-600" /> :
-                    <Folder className="h-4 w-4 mr-2 text-yellow-600" />
-                )}
-                {node.type === 'test' && <File className="h-4 w-4 mr-2 text-gray-600" />}
+                <span className="truncate text-sm font-medium group-hover:text-gray-900 transition-colors">
+                  {node.name}
+                </span>
                 
-                <span className="truncate text-sm">{node.name}</span>
-                
+                {/* Status indicator */}
                 {node.status && (
-                  <span className={`ml-auto text-xs ${getStatusColor(node.status)}`}>
-                    {getStatusIcon(node.status)}
-                  </span>
+                  <div className="ml-auto flex items-center">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusColor(node.status)} bg-opacity-10`}>
+                      {getStatusIcon(node.status)}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

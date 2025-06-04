@@ -1,4 +1,3 @@
-
 /**
  * Left Sidebar Component
  * 
@@ -223,7 +222,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     onChange: (checked: boolean) => void;
     onClick: (e: React.MouseEvent) => void;
   }> = ({ checked, indeterminate, onChange, onClick }) => {
-    const checkboxRef = useRef<HTMLButtonElement>(null);
+    const checkboxRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
       if (checkboxRef.current) {
@@ -232,13 +231,22 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     }, [indeterminate]);
 
     return (
-      <Checkbox
-        ref={checkboxRef}
-        checked={checked}
-        onCheckedChange={onChange}
-        onClick={onClick}
-        className="mr-3 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-      />
+      <div className="relative">
+        <input
+          ref={checkboxRef}
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          onClick={onClick}
+          className="sr-only"
+        />
+        <Checkbox
+          checked={checked}
+          onCheckedChange={onChange}
+          onClick={onClick}
+          className="mr-3 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+        />
+      </div>
     );
   };
 

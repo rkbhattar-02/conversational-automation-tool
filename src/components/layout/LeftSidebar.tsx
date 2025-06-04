@@ -22,12 +22,14 @@
  * - Search functionality for tests
  * - Collapsible folder structure
  * - Quick action buttons
+ * - Hierarchical checkbox selection
  */
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   ContextMenu,
@@ -65,6 +67,8 @@ interface TreeNode {
   isExpanded?: boolean;
   status?: 'passed' | 'failed' | 'running' | 'pending';
   route?: string;
+  selected?: boolean;
+  indeterminate?: boolean;
 }
 
 const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) => {
@@ -79,16 +83,18 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
       name: currentWorkspace?.name || 'Demo Workspace',
       type: 'project',
       isExpanded: true,
+      selected: false,
       children: [
         {
           id: '2',
           name: 'Authentication Tests',
           type: 'folder',
           isExpanded: true,
+          selected: false,
           children: [
-            { id: '3', name: 'Login Flow', type: 'test', status: 'passed', route: '/test-editor' },
-            { id: '4', name: 'Registration Flow', type: 'test', status: 'failed', route: '/test-editor' },
-            { id: '5', name: 'Password Reset', type: 'test', status: 'pending', route: '/test-editor' }
+            { id: '3', name: 'Login Flow', type: 'test', status: 'passed', route: '/test-editor', selected: false },
+            { id: '4', name: 'Registration Flow', type: 'test', status: 'failed', route: '/test-editor', selected: false },
+            { id: '5', name: 'Password Reset', type: 'test', status: 'pending', route: '/test-editor', selected: false }
           ]
         },
         {
@@ -96,15 +102,74 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
           name: 'Shopping Cart Tests',
           type: 'folder',
           isExpanded: false,
+          selected: false,
           children: [
-            { id: '7', name: 'Add to Cart', type: 'test', status: 'passed', route: '/test-editor' },
-            { id: '8', name: 'Remove from Cart', type: 'test', status: 'running', route: '/test-editor' },
-            { id: '9', name: 'Checkout Process', type: 'test', status: 'pending', route: '/test-editor' }
+            { id: '7', name: 'Add to Cart', type: 'test', status: 'passed', route: '/test-editor', selected: false },
+            { id: '8', name: 'Remove from Cart', type: 'test', status: 'running', route: '/test-editor', selected: false },
+            { id: '9', name: 'Checkout Process', type: 'test', status: 'pending', route: '/test-editor', selected: false }
           ]
         }
       ]
     }
   ]);
+
+  const updateNodeSelection = (nodes: TreeNode[], nodeId: string, selected: boolean): TreeNode[] => {
+    return nodes.map(node => {
+      if (node.id === nodeId) {
+        const updatedNode = { ...node, selected };
+        
+        // If node has children, update all children
+        if (updatedNode.children) {
+          updatedNode.children = updateAllChildren(updatedNode.children, selected);
+        }
+        
+        return updatedNode;
+      }
+      
+      if (node.children) {
+        const updatedChildren = updateNodeSelection(node.children, nodeId, selected);
+        const updatedNode = { ...node, children: updatedChildren };
+        
+        // Update parent state based on children
+        updateParentState(updatedNode);
+        
+        return updatedNode;
+      }
+      
+      return node;
+    });
+  };
+
+  const updateAllChildren = (children: TreeNode[], selected: boolean): TreeNode[] => {
+    return children.map(child => ({
+      ...child,
+      selected,
+      indeterminate: false,
+      children: child.children ? updateAllChildren(child.children, selected) : child.children
+    }));
+  };
+
+  const updateParentState = (node: TreeNode) => {
+    if (!node.children) return;
+    
+    const selectedChildren = node.children.filter(child => child.selected);
+    const indeterminateChildren = node.children.filter(child => child.indeterminate);
+    
+    if (selectedChildren.length === node.children.length) {
+      node.selected = true;
+      node.indeterminate = false;
+    } else if (selectedChildren.length > 0 || indeterminateChildren.length > 0) {
+      node.selected = false;
+      node.indeterminate = true;
+    } else {
+      node.selected = false;
+      node.indeterminate = false;
+    }
+  };
+
+  const handleCheckboxChange = (nodeId: string, checked: boolean) => {
+    setTreeData(prevData => updateNodeSelection(prevData, nodeId, checked));
+  };
 
   const toggleExpanded = (nodeId: string) => {
     const updateNode = (nodes: TreeNode[]): TreeNode[] => {
@@ -165,8 +230,20 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                 isSelected ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100'
               }`}
               style={{ paddingLeft: `${level * 16 + 8}px` }}
-              onClick={() => handleNodeClick(node)}
             >
+              {/* Checkbox */}
+              <Checkbox
+                checked={node.selected}
+                ref={(ref) => {
+                  if (ref && node.indeterminate) {
+                    ref.indeterminate = true;
+                  }
+                }}
+                onCheckedChange={(checked) => handleCheckboxChange(node.id, checked as boolean)}
+                className="mr-2"
+                onClick={(e) => e.stopPropagation()}
+              />
+
               {hasChildren && (
                 <Button
                   variant="ghost"
@@ -185,7 +262,10 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                 </Button>
               )}
               
-              <div className="flex items-center flex-1 min-w-0">
+              <div 
+                className="flex items-center flex-1 min-w-0"
+                onClick={() => handleNodeClick(node)}
+              >
                 {node.type === 'project' && <Folder className="h-4 w-4 mr-2 text-blue-600" />}
                 {node.type === 'folder' && (
                   node.isExpanded ? 

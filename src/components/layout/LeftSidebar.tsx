@@ -513,8 +513,8 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                 )}
               </div>
 
-              {/* Action buttons for folders only */}
-              {node.type === 'folder' && !isEditing && (
+              {/* Action buttons for folders and project root */}
+              {(node.type === 'folder' || node.type === 'project') && !isEditing && (
                 <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button
                     variant="ghost"
@@ -536,7 +536,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                       e.stopPropagation();
                       handleDeleteFolder(node.id);
                     }}
-                    title="Delete Folder"
+                    title={node.type === 'project' ? "Delete Project" : "Delete Folder"}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>

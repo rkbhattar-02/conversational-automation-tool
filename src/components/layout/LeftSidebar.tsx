@@ -99,11 +99,14 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
   const [showCreateTestCaseDialog, setShowCreateTestCaseDialog] = useState(false);
+  const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [showDeleteTestCasesDialog, setShowDeleteTestCasesDialog] = useState(false);
+  const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
   const [showNoTestCasesSelectedDialog, setShowNoTestCasesSelectedDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newTestCaseName, setNewTestCaseName] = useState('');
+  const [newProjectName, setNewProjectName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const [currentFolderForTestDeletion, setCurrentFolderForTestDeletion] = useState<string | null>(null);
@@ -243,6 +246,10 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     return selected;
   };
 
+  const getSelectedProjects = (nodes: TreeNode[]): TreeNode[] => {
+    return nodes.filter(node => node.selected && node.type === 'project');
+  };
+
   const createNewFolder = () => {
     if (!newFolderName.trim()) return;
     
@@ -321,6 +328,29 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     setParentFolderId(null);
   };
 
+  const createNewProject = () => {
+    if (!newProjectName.trim()) return;
+    
+    const newProject: TreeNode = {
+      id: `project-${Date.now()}`,
+      name: newProjectName,
+      type: 'project',
+      isExpanded: true,
+      selected: false,
+      children: []
+    };
+    
+    setTreeData(prevData => [...prevData, newProject]);
+    
+    setNewProjectName('');
+    setShowCreateProjectDialog(false);
+    
+    toast({
+      title: "Project created",
+      description: `Successfully created project "${newProjectName}"`,
+    });
+  };
+
   const deleteFolder = () => {
     if (!folderToDelete) return;
     
@@ -385,6 +415,26 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     });
   };
 
+  const deleteSelectedProjects = () => {
+    const selectedProjects = getSelectedProjects(treeData);
+    
+    if (selectedProjects.length === 0) return;
+    
+    setTreeData(prevData => {
+      return prevData.filter(node => {
+        // Don't remove if it's not a selected project
+        return !(node.type === 'project' && selectedProjects.some(selected => selected.id === node.id));
+      });
+    });
+    
+    setShowDeleteProjectDialog(false);
+    
+    toast({
+      title: "Projects deleted",
+      description: `Successfully deleted ${selectedProjects.length} project${selectedProjects.length > 1 ? 's' : ''}`,
+    });
+  };
+
   const deleteSelectedFolders = () => {
     const selectedFolders = getSelectedFolders(treeData);
     
@@ -420,6 +470,10 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     setShowCreateTestCaseDialog(true);
   };
 
+  const handleCreateProject = () => {
+    setShowCreateProjectDialog(true);
+  };
+
   const handleDeleteSelectedFolders = () => {
     const selectedFolders = getSelectedFolders(treeData);
     
@@ -442,6 +496,20 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     
     setCurrentFolderForTestDeletion(folderId);
     setShowDeleteTestCasesDialog(true);
+  };
+
+  const handleDeleteSelectedProjects = () => {
+    const selectedProjects = getSelectedProjects(treeData);
+    
+    if (selectedProjects.length === 0) {
+      toast({
+        title: "No projects selected",
+        description: "Please select a project before attempting to delete.",
+      });
+      return;
+    }
+    
+    setShowDeleteProjectDialog(true);
   };
 
   const updateNodeSelection = (nodes: TreeNode[], nodeId: string, selected: boolean): TreeNode[] => {
@@ -769,6 +837,26 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-gray-900">Project Explorer</h2>
+            <div className="flex space-x-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={handleCreateProject}
+                title="Create New Project"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={handleDeleteSelectedProjects}
+                title="Delete Selected Projects"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex space-x-1">
             <Button 
@@ -800,15 +888,68 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
       
       {/* Tree View */}
       <div className="flex-1 overflow-y-auto p-2">
-        {currentWorkspace ? (
+        {treeData.length > 0 ? (
           treeData.map(node => renderTreeNode(node))
         ) : (
           <div className="text-center py-8 text-gray-500">
             <Folder className="h-8 w-8 mx-auto mb-2" />
-            <p className="text-sm">No workspace selected</p>
+            <p className="text-sm">No projects found</p>
+            <p className="text-xs mt-1">Click the + button to create a new project</p>
           </div>
         )}
       </div>
+
+      {/* Create Project Dialog */}
+      <Dialog open={showCreateProjectDialog} onOpenChange={setShowCreateProjectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new project. This will create a new independent project structure.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Project name"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  createNewProject();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateProjectDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={createNewProject} disabled={!newProjectName.trim()}>
+              Create Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Projects Confirmation Dialog */}
+      <AlertDialog open={showDeleteProjectDialog} onOpenChange={setShowDeleteProjectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Projects</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete all the test folders and test cases within the selected projects. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteProjectDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={deleteSelectedProjects} className="bg-red-600 hover:bg-red-700">
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Folder Dialog */}
       <Dialog open={showCreateFolderDialog} onOpenChange={setShowCreateFolderDialog}>

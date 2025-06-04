@@ -8,6 +8,7 @@
  * - React Router for navigation context
  * - Custom layout components (navigation, sidebars, status bar)
  * - Workspace context for current workspace state
+ * - react-resizable-panels for resizable layout
  * 
  * Connected Components:
  * - TopNavigation (header with workspace info and actions)
@@ -21,10 +22,12 @@
  * - Workspace context distribution
  * - Layout state persistence
  * - Keyboard shortcuts for layout controls
+ * - Resizable panels for better content viewing
  */
 
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import TopNavigation from './TopNavigation';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
@@ -50,22 +53,50 @@ const AppLayout: React.FC<AppLayoutProps> = ({ currentWorkspace }) => {
       
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
-        <LeftSidebar 
-          isOpen={leftSidebarOpen} 
-          currentWorkspace={currentWorkspace}
-        />
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-white">
-          <Outlet />
-        </main>
-        
-        {/* Right Sidebar */}
-        <RightSidebar 
-          isOpen={rightSidebarOpen}
-          currentWorkspace={currentWorkspace}
-        />
+        <ResizablePanelGroup direction="horizontal" className="w-full">
+          {/* Left Sidebar Panel */}
+          {leftSidebarOpen && (
+            <>
+              <ResizablePanel 
+                defaultSize={20} 
+                minSize={15} 
+                maxSize={40}
+                className="min-w-[200px]"
+              >
+                <LeftSidebar 
+                  isOpen={leftSidebarOpen} 
+                  currentWorkspace={currentWorkspace}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+            </>
+          )}
+          
+          {/* Main Content Panel */}
+          <ResizablePanel defaultSize={leftSidebarOpen && rightSidebarOpen ? 60 : 80}>
+            <main className="h-full overflow-y-auto bg-white">
+              <Outlet />
+            </main>
+          </ResizablePanel>
+          
+          {/* Right Sidebar Panel */}
+          {rightSidebarOpen && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel 
+                defaultSize={20} 
+                minSize={15} 
+                maxSize={40}
+                className="min-w-[200px]"
+              >
+                <RightSidebar 
+                  isOpen={rightSidebarOpen}
+                  currentWorkspace={currentWorkspace}
+                />
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
       </div>
       
       {/* Bottom Status Bar */}

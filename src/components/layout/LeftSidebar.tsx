@@ -23,6 +23,7 @@
  * - Quick action buttons
  * - Hierarchical checkbox selection
  * - Inline editing for renaming folders and files
+ * - Resizable sidebar for better content viewing
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -762,7 +763,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
   }
 
   return (
-    <div className="w-80 border-r border-gray-200 bg-gray-50 flex flex-col">
+    <div className="min-w-[200px] max-w-[600px] w-80 border-r border-gray-200 bg-gray-50 flex flex-col resize-x overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">

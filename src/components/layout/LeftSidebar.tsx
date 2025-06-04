@@ -1,4 +1,3 @@
-
 /**
  * Left Sidebar Component
  * 
@@ -72,6 +71,7 @@ import {
   FileEdit
 } from 'lucide-react';
 import { type Workspace } from '@/services/api/workspace-service';
+import { useToast } from '@/hooks/use-toast';
 
 interface LeftSidebarProps {
   isOpen: boolean;
@@ -93,15 +93,19 @@ interface TreeNode {
 const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
   const [showCreateTestCaseDialog, setShowCreateTestCaseDialog] = useState(false);
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [showDeleteTestCasesDialog, setShowDeleteTestCasesDialog] = useState(false);
+  const [showNoTestCasesSelectedDialog, setShowNoTestCasesSelectedDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newTestCaseName, setNewTestCaseName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [currentFolderForTestDeletion, setCurrentFolderForTestDeletion] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -190,6 +194,34 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     } else if (e.key === 'Escape') {
       cancelEditing();
     }
+  };
+
+  const getSelectedTestCasesInFolder = (folderId: string): TreeNode[] => {
+    const selectedTestCases: TreeNode[] = [];
+    
+    const findFolder = (nodes: TreeNode[]): TreeNode | null => {
+      for (const node of nodes) {
+        if (node.id === folderId) {
+          return node;
+        }
+        if (node.children) {
+          const found = findFolder(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const folder = findFolder(treeData);
+    if (folder && folder.children) {
+      folder.children.forEach(child => {
+        if (child.type === 'test' && child.selected) {
+          selectedTestCases.push(child);
+        }
+      });
+    }
+    
+    return selectedTestCases;
   };
 
   const getSelectedFolders = (nodes: TreeNode[]): TreeNode[] => {
@@ -311,6 +343,47 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     setFolderToDelete(null);
   };
 
+  const deleteSelectedTestCasesInFolder = () => {
+    if (!currentFolderForTestDeletion) return;
+    
+    const selectedTestCases = getSelectedTestCasesInFolder(currentFolderForTestDeletion);
+    
+    setTreeData(prevData => {
+      const removeTestCasesFromFolder = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map(node => {
+          if (node.id === currentFolderForTestDeletion && node.children) {
+            return {
+              ...node,
+              children: node.children.filter(child => {
+                if (child.type === 'test' && selectedTestCases.some(selected => selected.id === child.id)) {
+                  return false; // Remove this test case
+                }
+                return true;
+              })
+            };
+          }
+          if (node.children) {
+            return {
+              ...node,
+              children: removeTestCasesFromFolder(node.children)
+            };
+          }
+          return node;
+        });
+      };
+      
+      return removeTestCasesFromFolder(prevData);
+    });
+    
+    setShowDeleteTestCasesDialog(false);
+    setCurrentFolderForTestDeletion(null);
+    
+    toast({
+      title: "Test cases deleted",
+      description: `Successfully deleted ${selectedTestCases.length} test case${selectedTestCases.length > 1 ? 's' : ''}`,
+    });
+  };
+
   const deleteSelectedFolders = () => {
     const selectedFolders = getSelectedFolders(treeData);
     
@@ -356,6 +429,18 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
     }
     
     setShowDeleteConfirmDialog(true);
+  };
+
+  const handleDeleteTestCasesInFolder = (folderId: string) => {
+    const selectedTestCases = getSelectedTestCasesInFolder(folderId);
+    
+    if (selectedTestCases.length === 0) {
+      setShowNoTestCasesSelectedDialog(true);
+      return;
+    }
+    
+    setCurrentFolderForTestDeletion(folderId);
+    setShowDeleteTestCasesDialog(true);
   };
 
   const updateNodeSelection = (nodes: TreeNode[], nodeId: string, selected: boolean): TreeNode[] => {
@@ -613,7 +698,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                     <Plus className="h-3 w-3" />
                   </Button>
                   
-                  {/* Delete button - only for project and folders */}
+                  {/* Delete button - different behavior for project vs folders */}
                   {(node.type === 'project' || node.type === 'folder') && (
                     <Button
                       variant="ghost"
@@ -621,9 +706,13 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                       className="h-6 w-6 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteSelectedFolders();
+                        if (node.type === 'project') {
+                          handleDeleteSelectedFolders();
+                        } else if (node.type === 'folder') {
+                          handleDeleteTestCasesInFolder(node.id);
+                        }
                       }}
-                      title="Delete Selected Folders"
+                      title={node.type === 'project' ? "Delete Selected Folders" : "Delete Selected Test Cases"}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -784,7 +873,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Folders Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -799,6 +888,43 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
             </AlertDialogCancel>
             <AlertDialogAction onClick={deleteSelectedFolders} className="bg-red-600 hover:bg-red-700">
               Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Test Cases Confirmation Dialog */}
+      <AlertDialog open={showDeleteTestCasesDialog} onOpenChange={setShowDeleteTestCasesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Test Cases</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the selected test cases and all their test steps. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteTestCasesDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={deleteSelectedTestCasesInFolder} className="bg-red-600 hover:bg-red-700">
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* No Test Cases Selected Dialog */}
+      <AlertDialog open={showNoTestCasesSelectedDialog} onOpenChange={setShowNoTestCasesSelectedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No Test Cases Selected</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please select a test case before attempting to delete.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowNoTestCasesSelectedDialog(false)}>
+              OK
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

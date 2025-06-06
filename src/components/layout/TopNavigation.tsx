@@ -49,7 +49,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   const [isAIAgentActive, setIsAIAgentActive] = useState(false);
 
   const tabs = [
-    { id: 'webapp', label: 'Web App', icon: Globe },
+    { id: 'webapp', label: 'Web App Testing', icon: Globe },
     { id: 'api-testing', label: 'API Testing', icon: Settings },
     { id: 'dashboard', label: 'Dashboard', icon: Monitor }
   ];

@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { workspaceService, type Workspace } from '@/services/api/workspace-service';
 import { testExecutionService, type TestExecution } from '@/services/api/test-execution-service';
+import TestCaseEditor from '@/pages/TestCaseEditor';
 
 interface DashboardProps {
   currentWorkspace?: Workspace | null;
@@ -55,6 +56,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<string | null>(null);
+  const [selectedTestCase, setSelectedTestCase] = useState<string | null>(null);
 
   // Fetch test executions for the current workspace
   const { data: executions = [], isLoading: executionsLoading } = useQuery({
@@ -110,6 +112,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleTestCaseSelect = (testCaseId: string) => {
+    setSelectedTestCase(testCaseId);
+  };
+
   if (!currentWorkspace) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -122,231 +128,60 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     );
   }
 
+  // If a test case is selected, show the test case editor
+  if (selectedTestCase) {
+    return (
+      <TestCaseEditor 
+        currentWorkspace={currentWorkspace}
+        testCaseId={selectedTestCase}
+        onBack={() => setSelectedTestCase(null)}
+      />
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{currentWorkspace.name}</h1>
-          <p className="text-gray-600 mt-1">{currentWorkspace.description}</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button
-            onClick={handleStartExecution}
-            disabled={isExecuting || files.length === 0}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Play className="h-4 w-4 mr-2" />
-            {isExecuting ? 'Running...' : 'Run Tests'}
-          </Button>
-          <Button variant="outline" disabled={!isExecuting}>
-            <Square className="h-4 w-4 mr-2" />
-            Stop
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Test Cases</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{files.filter(f => f.name.endsWith('.js')).length}</div>
-            <p className="text-xs text-muted-foreground">
-              +2 from last week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">94.2%</div>
-            <p className="text-xs text-muted-foreground">
-              +1.2% from last week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Last Execution</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2h ago</div>
-            <p className="text-xs text-muted-foreground">
-              15 tests passed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">4:32</div>
-            <p className="text-xs text-muted-foreground">
-              -0:15 from last week
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs defaultValue="executions" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="executions">Recent Executions</TabsTrigger>
-          <TabsTrigger value="files">Test Files</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="executions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Execution History</CardTitle>
-              <CardDescription>
-                Recent test runs and their results
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {executionsLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse flex space-x-4">
-                      <div className="rounded-full bg-gray-200 h-10 w-10"></div>
-                      <div className="flex-1 space-y-2 py-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : executions.length === 0 ? (
-                <div className="text-center py-8">
-                  <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No executions yet</h3>
-                  <p className="text-gray-600 mb-4">Run your first test to see execution history</p>
-                  <Button onClick={handleStartExecution} disabled={files.length === 0}>
-                    <Play className="h-4 w-4 mr-2" />
-                    Start First Test
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {executions.slice(0, 5).map((execution) => (
-                    <div 
-                      key={execution.id} 
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedExecution(execution.id)}
+      {/* Default empty state with message */}
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="text-center space-y-4">
+          <FileText className="h-16 w-16 text-gray-400 mx-auto" />
+          <h3 className="text-xl font-medium text-gray-900">Select a test case to edit</h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            Choose a test case from the project explorer on the left to start editing test steps and automation logic.
+          </p>
+          
+          {/* Quick actions to create test cases */}
+          <div className="pt-4 space-y-2">
+            <Button 
+              onClick={() => handleTestCaseSelect('new-test-case')}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Create New Test Case
+            </Button>
+            
+            {/* Show recent test cases if any exist */}
+            {files.filter(f => f.name.endsWith('.test.js')).length > 0 && (
+              <div className="pt-4">
+                <p className="text-sm text-gray-500 mb-2">Recent test cases:</p>
+                <div className="space-y-1">
+                  {files.filter(f => f.name.endsWith('.test.js')).slice(0, 3).map((file) => (
+                    <Button
+                      key={file.id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTestCaseSelect(file.id)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                     >
-                      <div className="flex items-center space-x-4">
-                        {getStatusIcon(execution.status)}
-                        <div>
-                          <div className="font-medium">Execution #{execution.id.slice(0, 8)}</div>
-                          <div className="text-sm text-gray-500">
-                            {execution.testCount} tests • {formatDuration(execution.duration)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <Badge 
-                          variant={execution.status === 'passed' ? 'default' : 'destructive'}
-                          className={getStatusColor(execution.status)}
-                        >
-                          {execution.status}
-                        </Badge>
-                        <div className="text-sm text-gray-500">
-                          {new Date(execution.startTime).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
+                      {file.name.replace('.test.js', '')}
+                    </Button>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="files" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Files</CardTitle>
-              <CardDescription>
-                Manage your test automation files
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filesLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse flex space-x-4">
-                      <div className="rounded bg-gray-200 h-8 w-8"></div>
-                      <div className="flex-1 space-y-2 py-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {files.map((file) => (
-                    <div key={file.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      <span className="flex-1">{file.name}</span>
-                      <span className="text-sm text-gray-500">{file.path}</span>
-                    </div>
-                  ))}
-                  {files.length === 0 && (
-                    <div className="text-center py-8">
-                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No files yet</h3>
-                      <p className="text-gray-600">Create your first test file to get started</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Test Success Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Passed</span>
-                    <span>94.2%</span>
-                  </div>
-                  <Progress value={94.2} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Average Execution Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">4:32</div>
-                <p className="text-sm text-gray-500">Average across all test runs</p>
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };

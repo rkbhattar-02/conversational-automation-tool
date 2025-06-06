@@ -1,200 +1,272 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  ResizablePanelGroup, 
-  ResizablePanel, 
-  ResizableHandle 
-} from '@/components/ui/resizable';
-import TestCaseHeader from '@/components/test-editor/TestCaseHeader';
-import TestStepsContainer from '@/components/test-editor/TestStepsContainer';
-import TestTableView from '@/components/test-editor/TestTableView';
-import TestCodeView from '@/components/test-editor/TestCodeView';
-import TestPropertiesPanel from '@/components/test-editor/TestPropertiesPanel';
+  ArrowLeft,
+  Save,
+  Plus,
+  FileText
+} from 'lucide-react';
 import { type Workspace } from '@/services/api/workspace-service';
 
 interface TestCaseEditorProps {
   currentWorkspace?: Workspace | null;
+  testCaseId?: string;
+  onBack?: () => void;
 }
 
 interface TestStep {
   id: string;
-  stepNumber: number;
-  action: string;
-  object: string;
-  parameters: string;
-  status?: 'passed' | 'failed' | 'running' | 'pending';
-  selected?: boolean;
+  content: string;
 }
 
-const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ currentWorkspace }) => {
-  const [testCaseName, setTestCaseName] = useState('Login Flow Test');
-  const [description, setDescription] = useState('Verify user can login with valid credentials');
-  const [viewMode, setViewMode] = useState<'enhanced' | 'table' | 'code'>('enhanced');
-  const [selectedSteps, setSelectedSteps] = useState<string[]>([]);
-  
-  // Enhanced test steps for the new interface
-  const [enhancedSteps, setEnhancedSteps] = useState<{id: string, content: string}[]>([
-    { id: 'step-1', content: 'launch chrome' },
-    { id: 'step-2', content: 'navigate "https://app.example.com/login"' },
-    { id: 'step-3', content: 'type emailInput "testuser@example.com"' },
-    { id: 'step-4', content: 'type passwordInput "password123"' },
-    { id: 'step-5', content: 'click loginButton' },
-    { id: 'step-6', content: 'waitFor userProfile' },
-    { id: 'step-7', content: 'assert userProfile visible' }
-  ]);
-
+const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ 
+  currentWorkspace, 
+  testCaseId,
+  onBack 
+}) => {
+  const [testCaseName, setTestCaseName] = useState('New Test Case');
   const [steps, setSteps] = useState<TestStep[]>([
-    {
-      id: '1',
-      stepNumber: 1,
-      action: 'Launch',
-      object: 'Browser',
-      parameters: '"Chrome"',
-      status: 'passed'
-    },
-    {
-      id: '2',
-      stepNumber: 2,
-      action: 'Navigate',
-      object: 'URL',
-      parameters: '"https://app.example.com/login"',
-      status: 'passed'
-    },
-    {
-      id: '3',
-      stepNumber: 3,
-      action: 'Input',
-      object: 'UsernameField',
-      parameters: '"testuser@example.com"',
-      status: 'failed'
-    },
-    {
-      id: '4',
-      stepNumber: 4,
-      action: 'Input',
-      object: 'PasswordField',
-      parameters: '"password123"',
-      status: 'pending'
-    },
-    {
-      id: '5',
-      stepNumber: 5,
-      action: 'Click',
-      object: 'LoginButton',
-      parameters: '',
-      status: 'pending'
-    }
+    { id: 'step-1', content: '' }
   ]);
+  const [focusedStepId, setFocusedStepId] = useState<string>('step-1');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  const stepRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const handleStepSelection = (stepId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSteps(prev => [...prev, stepId]);
-    } else {
-      setSelectedSteps(prev => prev.filter(id => id !== stepId));
+  // Auto-save functionality
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        handleAutoSave();
+      }, 5000);
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, steps]);
+
+  // Focus management
+  useEffect(() => {
+    if (focusedStepId && stepRefs.current[focusedStepId]) {
+      stepRefs.current[focusedStepId]?.focus();
+    }
+  }, [focusedStepId]);
+
+  const handleAutoSave = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate auto-save
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setHasUnsavedChanges(false);
+      console.log('Auto-saved test case:', { testCaseName, steps });
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const addStep = () => {
+  const handleManualSave = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate manual save
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setHasUnsavedChanges(false);
+      console.log('Manually saved test case:', { testCaseName, steps });
+    } catch (error) {
+      console.error('Manual save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateStep = (stepId: string, content: string) => {
+    setSteps(prevSteps => 
+      prevSteps.map(step =>
+        step.id === stepId ? { ...step, content } : step
+      )
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  const addStep = (afterStepId?: string) => {
+    const newStepId = `step-${Date.now()}`;
     const newStep: TestStep = {
-      id: Date.now().toString(),
-      stepNumber: steps.length + 1,
-      action: 'Click',
-      object: '',
-      parameters: '',
-      status: 'pending'
+      id: newStepId,
+      content: ''
     };
-    setSteps([...steps, newStep]);
+
+    if (afterStepId) {
+      const stepIndex = steps.findIndex(step => step.id === afterStepId);
+      const newSteps = [...steps];
+      newSteps.splice(stepIndex + 1, 0, newStep);
+      setSteps(newSteps);
+    } else {
+      setSteps(prevSteps => [...prevSteps, newStep]);
+    }
+
+    setFocusedStepId(newStepId);
+    setHasUnsavedChanges(true);
   };
 
-  const deleteStep = (id: string) => {
-    const updatedSteps = steps.filter(step => step.id !== id);
-    // Renumber steps
-    const renumberedSteps = updatedSteps.map((step, index) => ({
-      ...step,
-      stepNumber: index + 1
-    }));
-    setSteps(renumberedSteps);
+  const removeStep = (stepId: string) => {
+    if (steps.length === 1) return; // Don't remove the last step
+
+    const stepIndex = steps.findIndex(step => step.id === stepId);
+    const newSteps = steps.filter(step => step.id !== stepId);
+    setSteps(newSteps);
+
+    // Focus previous step or next step
+    if (newSteps.length > 0) {
+      const focusIndex = Math.max(0, stepIndex - 1);
+      setFocusedStepId(newSteps[focusIndex].id);
+    }
+
+    setHasUnsavedChanges(true);
   };
 
-  const updateStep = (id: string, field: keyof TestStep, value: string) => {
-    setSteps(steps.map(step => 
-      step.id === id ? { ...step, [field]: value } : step
-    ));
-  };
+  const handleKeyDown = (stepId: string, event: React.KeyboardEvent<HTMLInputElement>) => {
+    const stepIndex = steps.findIndex(step => step.id === stepId);
+    const isLastStep = stepIndex === steps.length - 1;
+    const currentStep = steps[stepIndex];
 
-  const generateCodeFromSteps = () => {
-    return enhancedSteps.map(step => step.content).filter(content => content.trim()).join('\n');
-  };
+    switch (event.key) {
+      case 'Enter':
+        event.preventDefault();
+        // Only create new step if this is the last step
+        if (isLastStep) {
+          addStep(stepId);
+        }
+        break;
 
-  const handleCodeChange = (code: string) => {
-    const lines = code.split('\n').filter(line => line.trim());
-    const newSteps = lines.map((line, index) => ({
-      id: `step-${index + 1}`,
-      content: line.trim()
-    }));
-    setEnhancedSteps(newSteps);
-  };
+      case 'Backspace':
+        // If the step is empty and it's not the only step, remove it
+        if (currentStep.content === '' && steps.length > 1) {
+          event.preventDefault();
+          removeStep(stepId);
+        }
+        break;
 
-  const renderMainContent = () => {
-    switch (viewMode) {
-      case 'enhanced':
-        return (
-          <TestStepsContainer
-            steps={enhancedSteps}
-            onStepsChange={setEnhancedSteps}
-          />
-        );
-      case 'table':
-        return (
-          <TestTableView
-            steps={steps}
-            selectedSteps={selectedSteps}
-            onStepSelection={handleStepSelection}
-            onAddStep={addStep}
-            onDeleteStep={deleteStep}
-            onUpdateStep={updateStep}
-          />
-        );
-      case 'code':
-        return (
-          <TestCodeView
-            code={generateCodeFromSteps()}
-            onChange={handleCodeChange}
-          />
-        );
-      default:
-        return null;
+      case 'ArrowUp':
+        event.preventDefault();
+        if (stepIndex > 0) {
+          setFocusedStepId(steps[stepIndex - 1].id);
+        }
+        break;
+
+      case 'ArrowDown':
+        event.preventDefault();
+        if (stepIndex < steps.length - 1) {
+          setFocusedStepId(steps[stepIndex + 1].id);
+        }
+        break;
     }
   };
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <TestCaseHeader
-        testCaseName={testCaseName}
-        description={description}
-        viewMode={viewMode}
-        onTestCaseNameChange={setTestCaseName}
-        onDescriptionChange={setDescription}
-        onViewModeChange={setViewMode}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Test Steps Panel */}
-          <ResizablePanel defaultSize={70} minSize={50}>
-            <div className="h-full flex flex-col">
-              {renderMainContent()}
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {onBack && (
+              <Button variant="ghost" size="icon" onClick={onBack}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <Input
+                value={testCaseName}
+                onChange={(e) => {
+                  setTestCaseName(e.target.value);
+                  setHasUnsavedChanges(true);
+                }}
+                className="text-lg font-semibold border-none bg-transparent p-0 h-auto focus:ring-0"
+              />
             </div>
-          </ResizablePanel>
+          </div>
           
-          <ResizableHandle withHandle />
-          
-          {/* Properties Panel */}
-          <ResizablePanel defaultSize={30} minSize={25}>
-            <TestPropertiesPanel />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+          <div className="flex items-center space-x-2">
+            {hasUnsavedChanges && (
+              <span className="text-sm text-amber-600">Unsaved changes</span>
+            )}
+            {isSaving && (
+              <span className="text-sm text-blue-600">Saving...</span>
+            )}
+            <Button 
+              onClick={handleManualSave}
+              disabled={isSaving}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Test Steps Editor */}
+      <div className="flex-1 overflow-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Steps</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
+                  {index + 1}
+                </div>
+                <Input
+                  ref={(el) => {
+                    stepRefs.current[step.id] = el;
+                  }}
+                  value={step.content}
+                  onChange={(e) => updateStep(step.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(step.id, e)}
+                  onFocus={() => setFocusedStepId(step.id)}
+                  placeholder="Enter test step..."
+                  className="flex-1 font-mono text-sm"
+                />
+              </div>
+            ))}
+            
+            {/* Add Step Button */}
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => addStep()}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Step</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Instructions */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">Keyboard Shortcuts:</h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">Enter</kbd> - Add new step (only at the last step)</li>
+            <li>• <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">Backspace</kbd> - Delete empty step</li>
+            <li>• <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">↑/↓</kbd> - Navigate between steps</li>
+            <li>• Auto-save occurs after 5 seconds of inactivity</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

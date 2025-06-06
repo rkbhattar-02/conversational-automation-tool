@@ -1,4 +1,3 @@
-
 /**
  * Main Application Component
  * 
@@ -34,6 +33,7 @@ import Register from "./pages/auth/Register";
 import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import TestCaseEditor from "./pages/TestCaseEditor";
+import WebAppTesting from "./pages/WebAppTesting";
 import NotFound from "./pages/NotFound";
 import WelcomeScreen from "./components/onboarding/WelcomeScreen";
 import WorkspaceManager from "./components/workspace/WorkspaceManager";
@@ -188,6 +188,10 @@ describe("Product Search", () => {
               <Route 
                 path="test-editor" 
                 element={<TestCaseEditor currentWorkspace={currentWorkspace} />} 
+              />
+              <Route 
+                path="webapp-testing" 
+                element={<WebAppTesting currentWorkspace={currentWorkspace} />} 
               />
             </Route>
             

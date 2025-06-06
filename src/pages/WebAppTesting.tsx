@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
   FileText,
@@ -13,10 +14,21 @@ interface WebAppTestingProps {
 }
 
 const WebAppTesting: React.FC<WebAppTestingProps> = ({ currentWorkspace }) => {
+  const location = useLocation();
   const [selectedTestCase, setSelectedTestCase] = useState<string | null>(null);
+  const [selectedTestCaseName, setSelectedTestCaseName] = useState<string | null>(null);
+
+  // Check if we navigated here with test case data
+  useEffect(() => {
+    if (location.state && location.state.testCaseId) {
+      setSelectedTestCase(location.state.testCaseId);
+      setSelectedTestCaseName(location.state.testCaseName || 'Test Case');
+    }
+  }, [location.state]);
 
   const handleTestCaseSelect = (testCaseId: string) => {
     setSelectedTestCase(testCaseId);
+    setSelectedTestCaseName('New Test Case');
   };
 
   if (!currentWorkspace) {
@@ -37,7 +49,11 @@ const WebAppTesting: React.FC<WebAppTestingProps> = ({ currentWorkspace }) => {
       <TestCaseEditor 
         currentWorkspace={currentWorkspace}
         testCaseId={selectedTestCase}
-        onBack={() => setSelectedTestCase(null)}
+        testCaseName={selectedTestCaseName || 'Test Case'}
+        onBack={() => {
+          setSelectedTestCase(null);
+          setSelectedTestCaseName(null);
+        }}
       />
     );
   }

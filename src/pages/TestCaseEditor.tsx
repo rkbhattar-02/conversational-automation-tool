@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +13,7 @@ import { type Workspace } from '@/services/api/workspace-service';
 interface TestCaseEditorProps {
   currentWorkspace?: Workspace | null;
   testCaseId?: string;
+  testCaseName?: string;
   onBack?: () => void;
 }
 
@@ -25,9 +25,10 @@ interface TestStep {
 const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ 
   currentWorkspace, 
   testCaseId,
+  testCaseName: initialTestCaseName = 'New Test Case',
   onBack 
 }) => {
-  const [testCaseName, setTestCaseName] = useState('New Test Case');
+  const [testCaseName, setTestCaseName] = useState(initialTestCaseName);
   const [steps, setSteps] = useState<TestStep[]>([
     { id: 'step-1', content: '' }
   ]);
@@ -36,6 +37,11 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const stepRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Update test case name when prop changes
+  useEffect(() => {
+    setTestCaseName(initialTestCaseName);
+  }, [initialTestCaseName]);
 
   // Auto-save functionality
   useEffect(() => {

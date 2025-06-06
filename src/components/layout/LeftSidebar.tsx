@@ -587,13 +587,14 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
 
   const handleNodeClick = (node: TreeNode) => {
     setSelectedNode(node.id);
-    if (node.route) {
-      navigate(node.route);
+    if (node.route && node.type === 'test') {
+      // Navigate to webapp testing with the test case
+      navigate('/webapp-testing', { state: { testCaseId: node.id, testCaseName: node.name } });
     }
   };
 
   const handleEditTest = (node: TreeNode) => {
-    navigate('/test-editor');
+    navigate('/webapp-testing', { state: { testCaseId: node.id, testCaseName: node.name } });
   };
 
   const getStatusColor = (status?: string) => {
@@ -749,6 +750,20 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
               {/* Action buttons */}
               {!isEditing && (
                 <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Edit button for renaming */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 p-0 mr-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditing(node.id, node.name);
+                    }}
+                    title="Rename"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  
                   {/* Add button - different behavior for project vs folders */}
                   <Button
                     variant="ghost"
@@ -799,6 +814,10 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
             <ContextMenuItem onClick={() => handleEditTest(node)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => startEditing(node.id, node.name)}>
+              <FileEdit className="mr-2 h-4 w-4" />
+              Rename
             </ContextMenuItem>
             <ContextMenuItem>
               <Copy className="mr-2 h-4 w-4" />
@@ -863,8 +882,8 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
               variant="ghost" 
               size="icon" 
               className="h-6 w-6"
-              onClick={() => navigate('/test-editor')}
-              title="Open Test Editor"
+              onClick={() => navigate('/webapp-testing')}
+              title="Open Web App Testing"
             >
               <FileEdit className="h-4 w-4" />
             </Button>

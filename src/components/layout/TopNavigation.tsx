@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
@@ -41,23 +42,30 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   currentWorkspace,
   onToggleLeftSidebar,
   onToggleRightSidebar,
-  activeTab = 'dashboard',
-  onTabChange,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [notificationCount, setNotificationCount] = useState(3);
   const [isAIAgentActive, setIsAIAgentActive] = useState(false);
 
   const tabs = [
-    { id: 'webapp', label: 'Web App Testing', icon: Globe },
-    { id: 'api-testing', label: 'API Testing', icon: Settings },
-    { id: 'dashboard', label: 'Dashboard', icon: Monitor }
+    { id: 'webapp', label: 'Web App Testing', icon: Globe, path: '/webapp-testing' },
+    { id: 'api-testing', label: 'API Testing', icon: Settings, path: '/api-testing' },
+    { id: 'dashboard', label: 'Dashboard', icon: Monitor, path: '/dashboard' }
   ];
 
-  const handleTabClick = (tabId: string) => {
-    if (onTabChange) {
-      onTabChange(tabId);
-    }
+  const getActiveTab = () => {
+    const path = location.pathname;
+    if (path.includes('webapp-testing')) return 'webapp';
+    if (path.includes('api-testing')) return 'api-testing';
+    return 'dashboard';
+  };
+
+  const activeTab = getActiveTab();
+
+  const handleTabClick = (tab: typeof tabs[0]) => {
+    navigate(tab.path);
   };
 
   return (
@@ -237,7 +245,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
                     ? 'bg-white border-blue-500 text-blue-600'
                     : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-100'
                 }`}
-                onClick={() => handleTabClick(tab.id)}
+                onClick={() => handleTabClick(tab)}
               >
                 <Icon className="h-4 w-4" />
                 <span className="text-sm font-medium">{tab.label}</span>

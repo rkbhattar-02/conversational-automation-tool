@@ -59,7 +59,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ currentWorkspace }) => {
             <main className="h-full overflow-y-auto bg-white">
               {shouldShowTabs ? (
                 <TabsManager 
-                  activeTab={activeTab} 
                   currentWorkspace={currentWorkspace} 
                 />
               ) : (

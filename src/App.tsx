@@ -1,3 +1,4 @@
+
 /**
  * Main Application Component
  * 
@@ -189,6 +190,25 @@ describe("Product Search", () => {
               <Route 
                 path="webapp-testing" 
                 element={<WebAppTesting currentWorkspace={currentWorkspace} />} 
+              />
+              <Route 
+                path="api-testing" 
+                element={
+                  <div className="p-6">
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="h-8 w-8 text-purple-600">⚡</div>
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">API Testing</h3>
+                      <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                        Test your REST APIs, GraphQL endpoints, and web services with our comprehensive testing suite.
+                      </p>
+                      <div className="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-full text-sm inline-block">
+                        This feature is coming soon
+                      </div>
+                    </div>
+                  </div>
+                } 
               />
               <Route 
                 path="test-editor" 

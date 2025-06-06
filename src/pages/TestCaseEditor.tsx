@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,6 +166,15 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
     setHasUnsavedChanges(true);
   };
 
+  const addStepAfterFocused = () => {
+    if (focusedStepId) {
+      addStep(focusedStepId);
+    } else {
+      // If no step is focused, add at the end
+      addStep();
+    }
+  };
+
   const removeStep = (stepId: string) => {
     if (steps.length === 1) return; // Don't remove the last step
 
@@ -294,7 +302,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
             <div className="flex justify-center pt-4">
               <Button
                 variant="outline"
-                onClick={() => addStep()}
+                onClick={addStepAfterFocused}
                 className="flex items-center space-x-2"
               >
                 <Plus className="h-4 w-4" />

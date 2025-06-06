@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,9 @@ interface TestStep {
   content: string;
 }
 
+// Store test case data separately for each test case
+const testCaseData: Record<string, { name: string; steps: TestStep[] }> = {};
+
 const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ 
   currentWorkspace, 
   testCaseId,
@@ -38,10 +42,47 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const stepRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // Update test case name when prop changes
+  // Load test case data when testCaseId changes
   useEffect(() => {
-    setTestCaseName(initialTestCaseName);
-  }, [initialTestCaseName]);
+    if (testCaseId) {
+      const savedData = testCaseData[testCaseId];
+      if (savedData) {
+        setTestCaseName(savedData.name);
+        setSteps(savedData.steps);
+        if (savedData.steps.length > 0) {
+          setFocusedStepId(savedData.steps[0].id);
+        }
+      } else {
+        // Initialize new test case with default values
+        setTestCaseName(initialTestCaseName);
+        const defaultSteps = [{ id: `step-${Date.now()}`, content: '' }];
+        setSteps(defaultSteps);
+        setFocusedStepId(defaultSteps[0].id);
+        testCaseData[testCaseId] = {
+          name: initialTestCaseName,
+          steps: defaultSteps
+        };
+      }
+      setHasUnsavedChanges(false);
+    }
+  }, [testCaseId, initialTestCaseName]);
+
+  // Update test case name when prop changes (but don't override saved data)
+  useEffect(() => {
+    if (!testCaseId || !testCaseData[testCaseId]) {
+      setTestCaseName(initialTestCaseName);
+    }
+  }, [initialTestCaseName, testCaseId]);
+
+  // Save to local storage whenever data changes
+  useEffect(() => {
+    if (testCaseId && (testCaseName || steps.length > 0)) {
+      testCaseData[testCaseId] = {
+        name: testCaseName,
+        steps: steps
+      };
+    }
+  }, [testCaseId, testCaseName, steps]);
 
   // Auto-save functionality
   useEffect(() => {
@@ -75,7 +116,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
       // Simulate auto-save
       await new Promise(resolve => setTimeout(resolve, 500));
       setHasUnsavedChanges(false);
-      console.log('Auto-saved test case:', { testCaseName, steps });
+      console.log('Auto-saved test case:', { testCaseId, testCaseName, steps });
     } catch (error) {
       console.error('Auto-save failed:', error);
     } finally {
@@ -89,7 +130,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
       // Simulate manual save
       await new Promise(resolve => setTimeout(resolve, 800));
       setHasUnsavedChanges(false);
-      console.log('Manually saved test case:', { testCaseName, steps });
+      console.log('Manually saved test case:', { testCaseId, testCaseName, steps });
     } catch (error) {
       console.error('Manual save failed:', error);
     } finally {

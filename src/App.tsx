@@ -185,13 +185,14 @@ describe("Product Search", () => {
             {/* Main Application Routes */}
             <Route path="/" element={<AppLayout currentWorkspace={currentWorkspace} />}>
               <Route index element={<Dashboard currentWorkspace={currentWorkspace} />} />
-              <Route 
-                path="test-editor" 
-                element={<TestCaseEditor currentWorkspace={currentWorkspace} />} 
-              />
+              <Route path="dashboard" element={<Dashboard currentWorkspace={currentWorkspace} />} />
               <Route 
                 path="webapp-testing" 
                 element={<WebAppTesting currentWorkspace={currentWorkspace} />} 
+              />
+              <Route 
+                path="test-editor" 
+                element={<TestCaseEditor currentWorkspace={currentWorkspace} />} 
               />
             </Route>
             

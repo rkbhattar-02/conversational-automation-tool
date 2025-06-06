@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Zap } from 'lucide-react';
@@ -8,11 +9,21 @@ import WebAppTesting from '@/pages/WebAppTesting';
 import { type Workspace } from '@/services/api/workspace-service';
 
 interface TabsManagerProps {
-  activeTab: string;
   currentWorkspace?: Workspace | null;
 }
 
-const TabsManager: React.FC<TabsManagerProps> = ({ activeTab, currentWorkspace }) => {
+const TabsManager: React.FC<TabsManagerProps> = ({ currentWorkspace }) => {
+  const location = useLocation();
+  
+  const getActiveTab = () => {
+    const path = location.pathname;
+    if (path.includes('webapp-testing')) return 'webapp';
+    if (path.includes('api-testing')) return 'api-testing';
+    return 'dashboard';
+  };
+
+  const activeTab = getActiveTab();
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'webapp':
@@ -47,8 +58,6 @@ const TabsManager: React.FC<TabsManagerProps> = ({ activeTab, currentWorkspace }
         );
 
       case 'dashboard':
-        return <Dashboard currentWorkspace={currentWorkspace} />;
-
       default:
         return <Dashboard currentWorkspace={currentWorkspace} />;
     }

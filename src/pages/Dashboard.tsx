@@ -47,7 +47,6 @@ import {
 } from 'lucide-react';
 import { workspaceService, type Workspace } from '@/services/api/workspace-service';
 import { testExecutionService, type TestExecution } from '@/services/api/test-execution-service';
-import TestCaseEditor from '@/pages/TestCaseEditor';
 
 interface DashboardProps {
   currentWorkspace?: Workspace | null;
@@ -56,7 +55,6 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<string | null>(null);
-  const [selectedTestCase, setSelectedTestCase] = useState<string | null>(null);
 
   // Fetch test executions for the current workspace
   const { data: executions = [], isLoading: executionsLoading } = useQuery({
@@ -112,10 +110,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleTestCaseSelect = (testCaseId: string) => {
-    setSelectedTestCase(testCaseId);
-  };
-
   if (!currentWorkspace) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -128,59 +122,138 @@ const Dashboard: React.FC<DashboardProps> = ({ currentWorkspace }) => {
     );
   }
 
-  // If a test case is selected, show the test case editor
-  if (selectedTestCase) {
-    return (
-      <TestCaseEditor 
-        currentWorkspace={currentWorkspace}
-        testCaseId={selectedTestCase}
-        onBack={() => setSelectedTestCase(null)}
-      />
-    );
-  }
-
   return (
     <div className="p-6 space-y-6">
-      {/* Default empty state with message */}
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <div className="text-center space-y-4">
-          <FileText className="h-16 w-16 text-gray-400 mx-auto" />
-          <h3 className="text-xl font-medium text-gray-900">Select a test case to edit</h3>
-          <p className="text-gray-600 max-w-md mx-auto">
-            Choose a test case from the project explorer on the left to start editing test steps and automation logic.
-          </p>
-          
-          {/* Quick actions to create test cases */}
-          <div className="pt-4 space-y-2">
+      {/* Welcome Header */}
+      <div className="text-center space-y-4">
+        <h2 className="text-3xl font-bold text-gray-900">Welcome to TestCraft IDE</h2>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Your comprehensive testing workspace. Manage test cases, track executions, and monitor your testing progress.
+        </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Test Cases</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{files.filter(f => f.name.endsWith('.test.js')).length}</div>
+            <p className="text-xs text-muted-foreground">
+              +2 from last week
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Recent Executions</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{executions.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Last run 2 hours ago
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">87%</div>
+            <p className="text-xs text-muted-foreground">
+              +5% from last week
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">3</div>
+            <p className="text-xs text-muted-foreground">
+              Team members active
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Test Executions</CardTitle>
+            <CardDescription>Latest test runs and their status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {executions.length > 0 ? (
+              <div className="space-y-4">
+                {executions.slice(0, 5).map((execution) => (
+                  <div key={execution.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getStatusIcon(execution.status)}
+                      <div>
+                        <p className="font-medium">{execution.testName}</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(execution.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={execution.status === 'passed' ? 'default' : 'destructive'}>
+                      {execution.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p>No test executions yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks and shortcuts</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <Button 
-              onClick={() => handleTestCaseSelect('new-test-case')}
-              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleStartExecution}
+              disabled={isExecuting}
+              className="w-full flex items-center justify-center space-x-2"
             >
+              <Play className="h-4 w-4" />
+              <span>{isExecuting ? 'Running Tests...' : 'Run All Tests'}</span>
+            </Button>
+            
+            <Button variant="outline" className="w-full">
               <FileText className="h-4 w-4 mr-2" />
               Create New Test Case
             </Button>
             
-            {/* Show recent test cases if any exist */}
-            {files.filter(f => f.name.endsWith('.test.js')).length > 0 && (
-              <div className="pt-4">
-                <p className="text-sm text-gray-500 mb-2">Recent test cases:</p>
-                <div className="space-y-1">
-                  {files.filter(f => f.name.endsWith('.test.js')).slice(0, 3).map((file) => (
-                    <Button
-                      key={file.id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleTestCaseSelect(file.id)}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                      {file.name.replace('.test.js', '')}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+            <Button variant="outline" className="w-full">
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Import Test Suite
+            </Button>
+            
+            <Button variant="outline" className="w-full">
+              <Calendar className="h-4 w-4 mr-2" />
+              Schedule Test Run
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

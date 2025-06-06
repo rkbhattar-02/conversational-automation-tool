@@ -665,6 +665,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                 isSelected ? 'bg-blue-50 text-blue-900 border border-blue-200' : 'hover:bg-gray-50'
               }`}
               style={{ paddingLeft: `${level * 16 + 8}px` }}
+              onClick={() => !isEditing && handleNodeClick(node)}
             >
               {/* Integrated Checkbox with Icon Container */}
               <div className="flex items-center mr-2">
@@ -711,10 +712,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
               </div>
               
               {/* Node Content */}
-              <div 
-                className="flex items-center flex-1 min-w-0"
-                onClick={() => !isEditing && handleNodeClick(node)}
-              >
+              <div className="flex items-center flex-1 min-w-0">
                 {isEditing ? (
                   <Input
                     ref={editInputRef}
@@ -726,13 +724,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, currentWorkspace }) =
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span 
-                    className="truncate text-sm font-medium group-hover:text-gray-900 transition-colors cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEditing(node.id, node.name);
-                    }}
-                  >
+                  <span className="truncate text-sm font-medium group-hover:text-gray-900 transition-colors">
                     {node.name}
                   </span>
                 )}

@@ -1,40 +1,12 @@
 
-/**
- * AppLayout Component
- * 
- * Purpose: Main layout wrapper that provides the core application structure with sidebar navigation,
- * top navigation, and content area. Manages workspace context and layout state.
- * 
- * Interaction Rules:
- * - Receives currentWorkspace prop from App.tsx and passes it down to child components
- * - Manages left and right sidebar visibility state (collapsed/expanded)
- * - Provides ResizablePanelGroup for adjustable layout panels
- * - Renders TopNavigation with workspace context and sidebar toggle handlers
- * - Uses React Router's Outlet to render page content based on current route
- * - Conditionally renders right sidebar (TabsManager) based on isRightSidebarOpen state
- * 
- * State Management:
- * - isLeftSidebarOpen: Controls visibility of left navigation sidebar
- * - isRightSidebarOpen: Controls visibility of right sidebar with tabs
- * 
- * Component Hierarchy:
- * App.tsx → AppLayout → [TopNavigation, LeftSidebar, Outlet, TabsManager]
- * 
- * Dependencies:
- * - Uses ResizablePanelGroup for adjustable layout
- * - Integrates with React Router for nested routing
- * - Manages workspace context throughout the layout
- * 
- * Props:
- * - currentWorkspace: Workspace object containing project data and settings
- */
-
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import TopNavigation from './TopNavigation';
 import LeftSidebar from './LeftSidebar';
+import RightSidebar from './RightSidebar';
+import BottomStatusBar from './BottomStatusBar';
 import TabsManager from './TabsManager';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { type Workspace } from '@/services/api/workspace-service';
 
 interface AppLayoutProps {
@@ -42,60 +14,81 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ currentWorkspace }) => {
-  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const location = useLocation();
 
-  const toggleLeftSidebar = () => {
-    setIsLeftSidebarOpen(!isLeftSidebarOpen);
-  };
-
-  const toggleRightSidebar = () => {
-    setIsRightSidebarOpen(!isRightSidebarOpen);
-  };
+  // Check if we're on a route that should show tabs instead of normal content
+  const shouldShowTabs = location.pathname === '/' || location.pathname === '/dashboard';
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top Navigation Bar - Fixed header with workspace context */}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top Navigation */}
       <TopNavigation
         currentWorkspace={currentWorkspace}
-        onToggleLeftSidebar={toggleLeftSidebar}
-        onToggleRightSidebar={toggleRightSidebar}
+        onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
+        onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
       
-      {/* Main Content Area with Resizable Panels */}
+      {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* Left Sidebar Panel - Collapsible file explorer and navigation */}
-          {isLeftSidebarOpen && (
+        <ResizablePanelGroup direction="horizontal" className="w-full">
+          {/* Left Sidebar Panel */}
+          {leftSidebarOpen && (
             <>
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <ResizablePanel 
+                defaultSize={20} 
+                minSize={15} 
+                maxSize={40}
+                className="min-w-[200px]"
+              >
                 <LeftSidebar 
+                  isOpen={leftSidebarOpen} 
                   currentWorkspace={currentWorkspace}
-                  isCollapsed={!isLeftSidebarOpen}
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
             </>
           )}
           
-          {/* Main Content Panel - Router outlet for page content */}
-          <ResizablePanel defaultSize={isRightSidebarOpen ? 60 : 80}>
-            <div className="h-full bg-white">
-              <Outlet />
-            </div>
+          {/* Main Content Panel */}
+          <ResizablePanel defaultSize={leftSidebarOpen && rightSidebarOpen ? 60 : 80}>
+            <main className="h-full overflow-y-auto bg-white">
+              {shouldShowTabs ? (
+                <TabsManager 
+                  currentWorkspace={currentWorkspace} 
+                />
+              ) : (
+                <Outlet />
+              )}
+            </main>
           </ResizablePanel>
           
-          {/* Right Sidebar Panel - Optional tabs manager */}
-          {isRightSidebarOpen && (
+          {/* Right Sidebar Panel */}
+          {rightSidebarOpen && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-                <TabsManager currentWorkspace={currentWorkspace} />
+              <ResizablePanel 
+                defaultSize={20} 
+                minSize={15} 
+                maxSize={40}
+                className="min-w-[200px]"
+              >
+                <RightSidebar 
+                  isOpen={rightSidebarOpen}
+                  currentWorkspace={currentWorkspace}
+                />
               </ResizablePanel>
             </>
           )}
         </ResizablePanelGroup>
       </div>
+      
+      {/* Bottom Status Bar */}
+      <BottomStatusBar currentWorkspace={currentWorkspace} />
     </div>
   );
 };

@@ -1,42 +1,4 @@
 
-/**
- * LeftSidebar Component
- * 
- * Purpose: Navigation sidebar that displays workspace file structure, navigation menu,
- * and workspace-specific tools. Provides file management and project navigation.
- * 
- * Interaction Rules:
- * - Receives currentWorkspace prop to display workspace-specific content
- * - isCollapsed prop controls the sidebar's visual state (used for future responsive behavior)
- * - Displays workspace files in a hierarchical tree structure
- * - Provides navigation links to different sections of the application
- * - Shows workspace settings and tools relevant to the current project
- * - Integrates with file management operations (create, edit, delete files)
- * 
- * State Management:
- * - Manages expanded/collapsed state of file tree nodes
- * - Tracks selected files and directories
- * - Handles file operation states (loading, error states)
- * 
- * Component Hierarchy:
- * AppLayout → LeftSidebar → [FileTree, NavigationMenu, WorkspaceTools]
- * 
- * File Operations:
- * - Create new files and folders
- * - Rename existing files
- * - Delete files and folders
- * - Navigate file structure
- * 
- * Dependencies:
- * - Uses workspace service for file operations
- * - Integrates with React Router for navigation
- * - Uses shadcn/ui components for consistent styling
- * 
- * Props:
- * - currentWorkspace: Current workspace data including files and settings
- * - isCollapsed: Boolean indicating if sidebar should show in collapsed state
- */
-
 import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -76,7 +38,6 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentWorkspace, isCollapsed
     setExpandedFolders(newExpanded);
   };
 
-  // Navigation sections with their respective tools and purposes
   const navigationSections = [
     {
       id: 'explorer',
@@ -106,7 +67,6 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentWorkspace, isCollapsed
 
   return (
     <div className="h-full bg-gray-50 border-r border-gray-200 flex flex-col">
-      {/* Sidebar Header with Workspace Info */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 truncate">
@@ -125,7 +85,6 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentWorkspace, isCollapsed
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {/* Navigation Sections */}
           {navigationSections.map((section) => {
             const Icon = section.icon;
             const isExpanded = expandedFolders.has(section.id);
@@ -216,7 +175,6 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentWorkspace, isCollapsed
         </div>
       </ScrollArea>
 
-      {/* Sidebar Footer with Workspace Actions */}
       <div className="p-3 border-t border-gray-200">
         <Button 
           variant="ghost" 
